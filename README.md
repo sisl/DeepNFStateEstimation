@@ -1,2 +1,2 @@
-# DeepCurrents
-CS230 Final Project - DeepCurrents
+# UnderCurrent
+CS230 Final Project - UnderCurrent
