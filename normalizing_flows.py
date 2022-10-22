@@ -6,7 +6,7 @@ import functorch
 import numpy as np
 from utils import create_dataset, read_dataset
 from kl_estimator import one_sample_kl_estimator,two_sample_kl_estimator
-from plot import plot_density, plot_dataset_mapping, plot_space_mapping
+from plot import plot_density, plot_dataset_mapping, plot_space_mapping, plot_training_loss
 
 
 class Flow(torch.nn.Module):
@@ -82,7 +82,7 @@ if __name__=="__main__":
             # loss = loss_function3(z_pred,torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros((2,)),torch.eye(2)).sample((10000,)))
             print(f"Iteration: {i+1}  -  Loss: {loss.detach().numpy()}")
             loss_list.append(loss.detach().numpy())
-            np.savetxt(f"./logs/{EXPERIMENT_NAME}/loss_.txt",loss_list)
+            np.savetxt(f"./logs/{EXPERIMENT_NAME}/loss.txt",loss_list)
             loss.backward()
             optim.step()
 
@@ -94,6 +94,7 @@ if __name__=="__main__":
         plot_density(model,x,"final",EXPERIMENT_NAME)
         plot_dataset_mapping(model,x,EXPERIMENT_NAME)
         plot_space_mapping(model,x,EXPERIMENT_NAME)
+        plot_training_loss(EXPERIMENT_NAME)
 
     
 

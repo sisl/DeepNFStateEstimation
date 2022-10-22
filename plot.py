@@ -1,5 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
+import numpy as np
 import functorch
 from utils import reference, color_grid
 
@@ -80,4 +81,18 @@ def plot_space_mapping(model,x,basename):
     fig.suptitle(r"Mapping between $\mathbf{X}$ and $\mathbf{Z}$")
     fig.tight_layout()
     fig.savefig(f"./figs/experiments/{basename}/space_mapping.png",dpi=600)
+    fig.show()
+    plt.style.use('default')
+
+def plot_training_loss(basename):
+    l = np.loadtxt(f"./logs/{basename}/loss.txt")
+    plt.rcParams['text.usetex'] = True
+    fig,axs = plt.subplots(1,1,figsize=(10,5))
+    axs.plot(l)
+    axs.grid(which="both")
+    axs.set_xlabel("Epoch")
+    axs.set_ylabel("Loss")
+    fig.suptitle("Loss During Training")
+    fig.tight_layout()
+    fig.savefig(f"./figs/experiments/{basename}/train_loss.png",dpi=600)
     fig.show()
