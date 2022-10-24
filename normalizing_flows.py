@@ -6,7 +6,7 @@ import functorch
 import numpy as np
 from utils import create_dataset, read_dataset
 from kl_estimator import one_sample_kl_estimator,two_sample_kl_estimator
-from plot import plot_density, plot_dataset_mapping, plot_space_mapping, plot_training_loss
+from plot import plot_density, plot_dataset_mapping, plot_space_mapping, plot_training_loss, plot_jacobian_determinant
 
 
 class Flow(torch.nn.Module):
@@ -53,9 +53,10 @@ def loss_function3(z_pred,ref_sampling):
         
 
 if __name__=="__main__":
-    EXPERIMENT_NAME = "tanh_max_likelihood"
+    EXPERIMENT_NAME = "marc_2"
     TRAIN = False
-    torch.manual_seed(123789)
+    N_ITERATIONS = 1000
+    torch.manual_seed(556358)
 
     for fp in [f"./figs/experiments/{EXPERIMENT_NAME}", f"./figs/experiments/{EXPERIMENT_NAME}/train",f"./logs/{EXPERIMENT_NAME}"]:
         isExist = os.path.exists(fp)
@@ -71,9 +72,9 @@ if __name__=="__main__":
         model = Flow()
         optim = torch.optim.Adam(model.parameters(),lr=0.001)
 
-        for i in range(100):    #good training at least requires 200 to 500 steps
+        for i in range(N_ITERATIONS):    #good training at least requires 200 to 500 steps
             torch.save(model.state_dict(),f"./logs/{EXPERIMENT_NAME}/model.pt")
-            plot_density(model,x,i,EXPERIMENT_NAME+"/train")    #comment out if training shouldln't be logged via images
+            # plot_density(model,x,i,EXPERIMENT_NAME+"/train")    #comment out if training shouldln't be logged via images
             optim.zero_grad()
             z_pred = model(x)
             J = functorch.vmap(functorch.jacrev(model.forward))(x)
@@ -91,10 +92,11 @@ if __name__=="__main__":
         model.load_state_dict(torch.load(f"./logs/{EXPERIMENT_NAME}/model.pt"))
         model.eval()
 
-        plot_density(model,x,"final",EXPERIMENT_NAME)
-        plot_dataset_mapping(model,x,EXPERIMENT_NAME)
+        plot_density(model,x,"final",EXPERIMENT_NAME,comparison=True)
+        plot_dataset_mapping(model,x,EXPERIMENT_NAME,comparison=True)
         plot_space_mapping(model,x,EXPERIMENT_NAME)
         plot_training_loss(EXPERIMENT_NAME)
+        plot_jacobian_determinant(model,x,EXPERIMENT_NAME)
 
     
 
