@@ -99,6 +99,15 @@ def read_dataset(fname):
         dataset = np.array(f.get("train"))
     return torch.Tensor(dataset)
 
+def read_bicycle_dataset(fname):
+    data = h5py.File(fname, 'r')
+    for group in data.keys() :
+        print (group)
+        for dset in data[group].keys():      
+            arr = data[group][dset][:] # adding [:] returns a numpy array
+    
+    return torch.Tensor(arr).T
+
 def reference(x):
     weights = [0.35, 0.65]
     mu_1 = torch.Tensor([[0.5,3.2]])

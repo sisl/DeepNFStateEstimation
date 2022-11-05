@@ -1,7 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import functorch
+# import functorch
 from utils import reference, color_grid, color_dataset
 
 def plot_density(model, x, i, base_name, comparison=False):
