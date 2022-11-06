@@ -28,3 +28,8 @@ The above configuration starts a new experiment (with training) under the name "
 
 ## Mapping from $\mathbf{X}$ to $\mathbf{Z}$ of Dataset
 ![Mapping X to Z](./figs/general/mapped_points6_999.png)
+
+## MDN result on bicycle dataset
+MDN trained with 5 Gaussians conditioned on timestep. Resulting distribution shown at 5 time steps sampled between 0 and 15 seconds. Mixture component with highest opacity represents component wight largest weight.
+
+![mdn](./figs/experiments/mdn/mdn_result.png)
