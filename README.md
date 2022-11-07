@@ -6,10 +6,10 @@ All the required Python packages are saved in `requirements.txt` and can be inst
 ```
 pip3 install -r requirements.txt
 ```
-The code is based on PyTorch 1.14 dev. In case there are issues with the automatic installation of 1.14 dev, the pip installation (for the CPU version) can be started with 
+The code is based on PyTorch 1.14 dev. Since the nightly builds of Pytorch can't (at least to my knowledge) easily installed through a requirement file, executing the `install_pytorch_nightly.sh` file should install the nighlty build of pytorch as well the `nflows` package. *Important: We use our own fork of the `nflows` package for our custom conditioner functions  (i.e., Transformers)*.
 
 ```
-pip3 install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+bash install_pytorch_nightly.sh
 ```
 
 A new experiment can be started from the `normalizing_flows.py` file. 

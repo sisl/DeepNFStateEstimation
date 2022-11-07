@@ -38,6 +38,38 @@ def color_grid(num_x1, num_x2, x1_min, x1_max, x2_min, x2_max):
 
     return X_flat, color
 
+def color_dataset(x):
+    x1_min = torch.min(x[:,0])
+    x1_max = torch.max(x[:,0])
+    x2_min = torch.min(x[:,1])
+    x2_max = torch.max(x[:,1])
+
+    xA = [x1_min,x2_min]
+    xB = [x1_max,x2_min]
+    xC = [x1_max,x2_max]
+    xD = [x1_min,x2_max]
+    XS = np.stack((xA,xB,xC,xD)).T
+
+    A = np.array([250, 166, 10])/255 #orange
+    B = np.array([17, 95, 250])/255 #blue
+    C = np.array([247, 12, 36])/255 # red
+    D = np.array([7, 242, 133])/255 #green
+
+    Z = np.stack((A,B,C,D))
+
+    r_interp = interp2d(XS[0],XS[1],Z[:,0])
+    r = np.array([r_interp(p[0],p[1]) for p in x]).squeeze()
+
+    g_interp = interp2d(XS[0],XS[1],Z[:,1])
+    g = np.array([g_interp(p[0],p[1]) for p in x]).squeeze()
+
+    b_interp = interp2d(XS[0],XS[1],Z[:,2])
+    b = np.array([b_interp(p[0],p[1]) for p in x]).squeeze()
+
+    color = np.stack((r,g,b),axis=-1)
+
+    return color
+
 def create_dataset(num_samples, fname):
     mu_1 = torch.Tensor([[0.5,3.2]])
     cov_1 = torch.Tensor([[0.4,-0.3],[-0.3,0.9]])
@@ -66,6 +98,15 @@ def read_dataset(fname):
     with h5py.File(fname, 'r') as f:
         dataset = np.array(f.get("train"))
     return torch.Tensor(dataset)
+
+def read_bicycle_dataset(fname):
+    data = h5py.File(fname, 'r')
+    for group in data.keys() :
+        print (group)
+        for dset in data[group].keys():      
+            arr = data[group][dset][:] # adding [:] returns a numpy array
+    
+    return torch.Tensor(arr).T
 
 def reference(x):
     weights = [0.35, 0.65]

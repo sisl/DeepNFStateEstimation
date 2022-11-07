@@ -2,6 +2,3 @@ h5py>=3.7.0
 matplotlib>=3.5.1
 numpy>=1.22.3
 scipy>=1.8.0
-torch>=1.14.0.dev20221021
-torchaudio>=0.14.0.dev20221021
-torchvision>=0.15.0.dev20221021
