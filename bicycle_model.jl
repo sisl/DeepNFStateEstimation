@@ -87,10 +87,11 @@ end
 #*******************************************************************************
 # ROLLOUT AND PLOT TRAJECTORIES
 #*******************************************************************************
+N = 250 # Number of trajectories to simulate
 # Simulate trajectories with the noisy dynamics
 s0 = [x0, y0, θ0, v0, ϕ0, t0]
 t = lastindex(times)
-τ_arr = simulate_τ(n_traj, s0, s->bicycle_dynamics(s, withNoise=true), t);
+τ_arr = simulate_τ(N, s0, s->bicycle_dynamics(s, withNoise=true), t);
 
 # Store sample x,y data to plot at the same time step across simulations
 plot_x, plot_y = extract_xy(τ_arr, viz_step);
@@ -116,10 +117,11 @@ save("figs/bicycle_rollouts.pdf", p)
 #*******************************************************************************
 # DATASET GENERATION
 #*******************************************************************************
+N = 1000 # Number of trajectories to simulate
 # Simulate trajectories with the noisy dynamics
 s0 = [x0, y0, θ0, v0, ϕ0, t0]
 t = lastindex(times)
-τ_arr = simulate_τ(n_traj, s0, s->bicycle_dynamics(s, withNoise=true), t, drop_rate = 0.9);
+τ_arr = simulate_τ(N, s0, s->bicycle_dynamics(s, withNoise=true), t, drop_rate=0.9);
 
 # Store the x, y, and time data
 x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]]
@@ -141,4 +143,13 @@ fid = h5open("bicycle_dataset.h5", "w")
 create_group(fid, "group")
 g = fid["group"]
 g["bicycle_data"] = [x y t]
+close(fid)
+
+##
+# Save the data
+fid = h5open("bicycle_dataset.h5", "w")
+fid["position"] = [x y]
+fid["time"] = t
+#g = fid["group"]
+#g["bicycle_data"] = [x y t]
 close(fid)
