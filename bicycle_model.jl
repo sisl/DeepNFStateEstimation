@@ -37,7 +37,7 @@ v0 = 6.0    # Initial value for velocity [m/s]
 ϕ0 = 0.0    # Initial value for steering angle [rad]           
 t0 = 0.0    # Initial value for time [s]  
 
-σv = 0.005  # Standard deviation for velocity [m/s]
+σv = 0.01   # Standard deviation for velocity [m/s]
 σϕ = 0.0025 # Standard deviation for steering angle [rad]
 
 ##
