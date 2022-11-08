@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from kl_estimator import one_sample_kl_estimator,two_sample_kl_estimator
-from utils import read_dataset
+from utils import read_dataset, read_bicycle_dataset
 import os
-from plot import plot_space_mapping,plot_dataset_mapping
+from plot import plot_space_mapping,plot_dataset_mapping,plot_density
 
 EXPERIMENT_NAME = "vae_1"
 
@@ -90,9 +90,11 @@ class VAE(nn.Module):
 input_dim = 2
 epochs = 1000
 model = VAE(input_dim)
-optimizer = torch.optim.Adam(model.parameters(),lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.0009)
 
-x = read_dataset("dataset2.h5")
+x,t = read_bicycle_dataset("bicycle_dataset_discrete.h5")
+x = x[t==14,:]
+x = (x-torch.mean(x,dim=0))/torch.std(x,dim=0)
 
 for i in range(epochs):
     optimizer.zero_grad()
@@ -103,11 +105,13 @@ for i in range(epochs):
     reconstruction_loss = torch.linalg.norm(x-x_predict,dim=1).mean()
     # reconstruction_loss = torch.nn.functional.mse_loss(x_predict,x)
     # reconstruction_loss = two_sample_kl_estimator(x,x_predict)
-    loss = latent_loss + reconstruction_loss
+    loss = 5 * latent_loss + reconstruction_loss
     print(f"Epoch {i}/{epochs} - Loss: {loss.detach().item()}")
     loss.backward()
     optimizer.step()
 
+plot_density(model,x,6767,EXPERIMENT_NAME)
 plot_space_mapping(model,x,EXPERIMENT_NAME)
 plot_dataset_mapping(model,x,EXPERIMENT_NAME,comparison=True)
+
 print("stop")

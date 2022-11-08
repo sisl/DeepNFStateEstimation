@@ -1,7 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-# import functorch
+import functorch
 from utils import reference, color_grid, color_dataset
 
 def plot_density(model, x, i, base_name, comparison=False):
@@ -9,8 +9,8 @@ def plot_density(model, x, i, base_name, comparison=False):
 
     ref_dist = torch.distributions.MultivariateNormal(torch.zeros((x.shape[1])),torch.eye(x.shape[1]))
 
-    x1 = torch.linspace(-2,5,100)
-    x2 = torch.linspace(-1,7,100)
+    x1 = torch.linspace(-5,5,100)
+    x2 = torch.linspace(-5,5,100)
     X = torch.meshgrid((x1,x2))
     X = torch.stack(X,dim=-1)
     X_flat = torch.reshape(X,(-1,2))
@@ -56,10 +56,10 @@ def plot_density(model, x, i, base_name, comparison=False):
     else:
         #plot density
         plt.rcParams['text.usetex'] = True
-        plt.contourf(X[:,:,0],X[:,:,1],probs.detach().numpy(),levels=50)
+        plt.contourf(X[:,:,0],X[:,:,1],probs.detach().numpy(),levels=100)
         plt.scatter(x[:,0],x[:,1],s=1,color=(0,0,0))
-        plt.xlim(-2,5)
-        plt.ylim(-1,7)
+        plt.xlim(-5,5)
+        plt.ylim(-5,5)
         plt.savefig(f"./figs/experiments/{base_name}/density_{i}.png",dpi=600)
         plt.clf()
 
