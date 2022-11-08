@@ -136,7 +136,7 @@ def plot_mdn_prediction(ax, mu, sigma, pi):
         if pi[i] == torch.max(pi):
             alpha = 1.0
         else:
-            alpha = 0.2
+            alpha = 0.5
 
         ell = plot_ellipse(M, S, alpha=alpha)
         ax.add_patch(ell)
@@ -200,10 +200,20 @@ sigma = sigma*target_s
 ax = plot_mdn_bicycle(mu, sigma, pi)
 
 plt.gca()
-plt.xlim(0, 80)
+plt.xlim(0, 90)
 plt.ylim(0, 50)
 
-plt.scatter(data[:, 0], data[:, 1], zorder=0)
-
+plt.scatter(data[:, 0], data[:, 1], zorder=0, s=0.5)
+plt.xlabel("x (m)")
+plt.ylabel("y (m)")
 plt.grid()
 plt.show()
+
+
+xs = torch.linspace(0, 90, steps=100)
+ys = torch.linspace(0, 50, steps=100)
+#x, y = torch.meshgrid(xs, ys, indexing='xy')
+
+# for x in xs:
+#     for y in ys:
+
