@@ -1,11 +1,11 @@
 import h5py
 import matplotlib.pyplot as plt
 
-filename = './bicycle_dataset.h5'
+filename = './bicycle_dataset_discrete.h5'
 data = h5py.File(filename, 'r')
 for group in data.keys() :
     print (group)
-    for dset in data[group].keys():      
+    for dset in data[group].keys(): 
         arr = data[group][dset][:] # adding [:] returns a numpy array
 
 
