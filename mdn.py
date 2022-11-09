@@ -14,6 +14,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
+import matplotlib
+import h5py
 
 
 ONEOVERSQRT2PI = 1.0 / math.sqrt(2 * math.pi)
@@ -155,65 +157,144 @@ def plot_mdn_bicycle(mu, sigma, pi):
 
     return ax
 
-data = read_bicycle_dataset("bicycle_dataset.h5")
-train_feats = torch.unsqueeze(data[:, 2], dim=1)
+def plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500):
+    # grid the space
+    model.eval()
+    x = np.linspace(0, 90, n)
+    y = np.linspace(0, 50, n)
+    xx, yy = np.meshgrid(x, y)
+    eval_targets = torch.Tensor(np.vstack([xx.flatten(), yy.flatten()]).T).squeeze()
+    norm_eval_targets = (eval_targets - target_m)/target_s
 
-feat_m = torch.mean(train_feats)
-feat_s = torch.std(train_feats)
-train_feats = (train_feats - feat_m)/feat_s
+    # total_density = np.zeros((n, n, len(ts)))
+    total_density = np.zeros((n, n))
+    for (i, t) in enumerate(ts):
+        eval_feats = t * torch.ones(n*n, 1)#torch.Tensor([[10.0]])
+        norm_eval_feats =  (eval_feats - feat_m)/feat_s
 
-train_targets = data[:, 0:2]
-target_m = torch.mean(train_targets, dim=0)
-target_s = torch.std(train_targets, dim=0)
-train_targets = (train_targets - target_m)/target_s
+        pi_eval, sigma_eval, mu_eval = model(norm_eval_feats)
 
-# initialize the model
-model = nn.Sequential(
-    nn.Linear(1, 8),
-    nn.Tanh(),
-   MDN(8, 2, 5)
-)
-optimizer = optim.Adam(model.parameters())
+        probs = torch.sum(pi_eval * gaussian_probability(sigma_eval, mu_eval, norm_eval_targets), dim=1)
+        nll = -torch.log(probs)
+        nll = nll.reshape((n, n))
+        probs = probs.reshape((n, n))
+        # total_density[:, :, i] = probs.detach().numpy()
+        total_density +=  probs.detach().numpy()
 
-# train the model
-nepochs = 5000
-loss_history = torch.zeros(nepochs)
-for epoch in range(nepochs):
-    model.zero_grad()
-    pi, sigma, mu = model(train_feats)
-    loss = mdn_loss(pi, sigma, mu, train_targets)
-    loss_history[epoch] = loss.item()
-    loss.backward()
-    optimizer.step()
-    #if epoch % 10 == 99:
-    print(f'{round(epoch)}', end='\n')
-
-print('Done')
-
-x_test = (torch.linspace(0, 15, 5).reshape(-1, 1) - feat_m)/feat_s
-with torch.no_grad():
-    pi, sigma, mu = model(x_test)
-
-mu = mu*target_s + target_m
-sigma = sigma*target_s
-
-ax = plot_mdn_bicycle(mu, sigma, pi)
-
-plt.gca()
-plt.xlim(0, 90)
-plt.ylim(0, 50)
-
-plt.scatter(data[:, 0], data[:, 1], zorder=0, s=0.5)
-plt.xlabel("x (m)")
-plt.ylabel("y (m)")
-plt.grid()
-plt.show()
+    plt.rcParams['text.usetex'] = True
+    plt.figure()
+    plt.contourf(xx, yy, total_density, levels=50, norm=matplotlib.colors.LogNorm())
+    plt.show()
 
 
-xs = torch.linspace(0, 90, steps=100)
-ys = torch.linspace(0, 50, steps=100)
-#x, y = torch.meshgrid(xs, ys, indexing='xy')
+def main(train=False, savepath = "./logs/mdn/mdn.pt"):
+    fname = "bicycle_dataset_continuous.h5"
+    data = h5py.File(fname, 'r')
 
-# for x in xs:
-#     for y in ys:
+    train_feats = torch.unsqueeze(torch.Tensor(data["time"][:]),  dim=1)
+    print(train_feats.shape)
 
+    feat_m = torch.mean(train_feats)
+    feat_s = torch.std(train_feats)
+    train_feats = (train_feats - feat_m)/feat_s
+
+    train_targets = torch.Tensor(data["position"][:].T)
+    print(train_targets.shape)
+    target_m = torch.mean(train_targets, dim=0)
+    target_s = torch.std(train_targets, dim=0)
+    train_targets = (train_targets - target_m)/target_s
+
+    # initialize the model
+    model = nn.Sequential(
+        nn.Linear(1, 8),
+        nn.Tanh(),
+        nn.Linear(8, 8),
+        nn.Tanh(),
+    MDN(8, 2, 5)
+    )
+
+    if train:
+        optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+        # train the model
+        nepochs = 5000
+        loss_history = torch.zeros(nepochs)
+        for epoch in range(nepochs):
+            model.zero_grad()
+            pi, sigma, mu = model(train_feats)
+            loss = mdn_loss(pi, sigma, mu, train_targets)
+            loss_history[epoch] = loss.item()
+            loss.backward()
+            optimizer.step()
+            #if epoch % 10 == 99:
+            print(f'{round(epoch)}', end='\n')
+
+        print('Done')
+
+        # x_test = (torch.linspace(0, 15, 5).reshape(-1, 1) - feat_m)/feat_s
+        x_test = (torch.arange(0, 16, 2).reshape(-1, 1) - feat_m)/feat_s
+        with torch.no_grad():
+            pi, sigma, mu = model(x_test)
+
+        mu = mu*target_s + target_m
+        sigma = sigma*target_s
+
+        ax = plot_mdn_bicycle(mu, sigma, pi)
+
+        plt.gca()
+        plt.xlim(0, 90)
+        plt.ylim(0, 70)
+
+        #raw_position = data["position"][:].T
+        discrete_data = h5py.File("bicycle_dataset_discrete.h5", 'r')
+        plt.scatter(discrete_data["position"][0, :], discrete_data["position"][1, :], zorder=0, s=0.5)
+        plt.xlabel("x (m)")
+        plt.ylabel("y (m)")
+        plt.grid()
+        #plt.show()
+
+        plt.figure()
+        plt.plot(loss_history)
+        #plt.show()
+
+        torch.save(model.state_dict(), savepath)
+
+
+    model.load_state_dict(torch.load(savepath))
+
+    # grid the space
+    n = 500
+    x = np.linspace(0, 90, n)
+    y = np.linspace(0, 50, n)
+    xx, yy = np.meshgrid(x, y)
+
+    eval_feats = 5.0 * torch.ones(n*n, 1)#torch.Tensor([[10.0]])
+    norm_eval_feats =  (eval_feats - feat_m)/feat_s
+
+    eval_targets = torch.Tensor(np.vstack([xx.flatten(), yy.flatten()]).T).squeeze()
+    norm_eval_targets = (eval_targets - target_m)/target_s
+
+    print()
+    print(eval_feats.shape)
+    print(eval_targets.shape)
+
+    pi_eval, sigma_eval, mu_eval = model(norm_eval_feats)
+
+    probs = torch.sum(pi_eval * gaussian_probability(sigma_eval, mu_eval, norm_eval_targets), dim=1)
+    nll = -torch.log(probs)
+    print(probs.shape)
+    nll = nll.reshape((n, n))
+    probs = probs.reshape((n, n))
+
+    plt.rcParams['text.usetex'] = True
+    plt.figure()
+    plt.contourf(xx, yy, probs.detach().numpy())
+    plt.show()
+    
+    ts = [12]#np.arange(2, 16, 2)
+    plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500)
+
+
+
+if __name__ == "__main__":
+    main(train=False, savepath="./logs/mdn/mdn.pt")
