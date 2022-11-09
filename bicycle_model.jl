@@ -87,25 +87,28 @@ end
 #*******************************************************************************
 # DATASET GENERATION (DISCRETE)
 #*******************************************************************************
-N = 1000 # Number of trajectories to simulate
+N = 100000 # Number of trajectories to simulate
 # Simulate trajectories with the noisy dynamics
 s0 = [x0, y0, θ0, v0, ϕ0, t0]
 t = lastindex(times)
 τ_arr = simulate_τ(N, s0, s->bicycle_dynamics(s, withNoise=true), t, drop_rate=0.0);
 
 # Store the x, y, and time data at discrete time steps
-x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i][1:viz_step:end]]
-y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i][1:viz_step:end]]
-t = [Int(round(s[6])) for i in 1:lastindex(τ_arr) for s in τ_arr[i][1:viz_step:end]]
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i][1:viz_step:end]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i][1:viz_step:end]];
+t = [Int(round(s[6])) for i in 1:lastindex(τ_arr) for s in τ_arr[i][1:viz_step:end]];
 
+##
 # Plot the stored data
 p = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqual=true,
             xlabel="x", ylabel="y",title="Bicycle Model Rollouts",
             legendPos = "north east",legendStyle="nodes = {scale = 0.75}")
 
 # Store sample x,y data to plot at the same time step across simulations
-plot_x, plot_y = extract_xy(τ_arr, viz_step);
+# (Only examining the first 1000 trajectories)
+plot_x, plot_y = extract_xy(τ_arr[1:1000], viz_step);
 
+##
 for i = 1:Int(ceil(length(times)/viz_step))
     # Extract the sampled points from the trajectory rollouts
     x_points = [cluster[i] for cluster in plot_x]
