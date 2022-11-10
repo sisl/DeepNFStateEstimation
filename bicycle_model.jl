@@ -132,22 +132,23 @@ close(fid)
 #*******************************************************************************
 # DATASET GENERATION (CONTINUOUS)
 #*******************************************************************************
-N = 1000 # Number of trajectories to simulate
+N = 100000 # Number of trajectories to simulate
 # Simulate trajectories with the noisy dynamics
 s0 = [x0, y0, θ0, v0, ϕ0, t0]
 t = lastindex(times)
 τ_arr = simulate_τ(N, s0, s->bicycle_dynamics(s, withNoise=true), t, drop_rate = 0.9);
 
 # Store the x, y, and time data
-x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]]
-y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]]
-t = [s[6] for i in 1:lastindex(τ_arr) for s in τ_arr[i]]
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+t = [s[6] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
 
+##
 # Plot the stored data
 p = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqual=true,
             xlabel="x", ylabel="y",title="Bicycle Model Rollouts",
             legendPos = "north east",legendStyle="nodes = {scale = 0.75}")
-push!(p, PGFPlots.Linear(x, y, 
+push!(p, PGFPlots.Linear(x[1:1000], y[1:1000], 
             style = "pastelBlue, only marks, mark options=
             {scale=0.25,fill=pastelBlue, solid, mark = o}, forget plot"))
 
@@ -159,3 +160,24 @@ fid = h5open("bicycle_dataset_continuous.h5", "w")
 fid["position"] = [x y]
 fid["time"] = t
 close(fid)
+
+
+
+##
+s0 = [x0, y0, θ0, v0, ϕ0, t0]
+t = lastindex(times)
+τ_arr = simulate_τ(1, s0, s->bicycle_dynamics(s, withNoise=false), t, drop_rate=0.0);
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+
+
+Plots.Linear(x,y)
+##
+using DataFrames
+using CSV
+df = [x y]
+
+df = DataFrame(df, :auto)
+
+##
+CSV.write("nominal_trajectory.csv", df)
