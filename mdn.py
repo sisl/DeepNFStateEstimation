@@ -8,7 +8,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-from torch.distributions import Categorical
+from torch.distributions.mixture_same_family import MixtureSameFamily
+from torch.distributions.categorical import Categorical
+from torch.distributions.normal import Normal
 from utils import read_dataset, read_bicycle_dataset
 import math
 import numpy as np
@@ -16,6 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib
 import h5py
+
 
 
 ONEOVERSQRT2PI = 1.0 / math.sqrt(2 * math.pi)
@@ -157,7 +160,7 @@ def plot_mdn_bicycle(mu, sigma, pi):
 
     return ax
 
-def plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500):
+def plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500, levels=10):
     # grid the space
     model.eval()
     x = np.linspace(0, 90, n)
@@ -165,6 +168,18 @@ def plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500):
     xx, yy = np.meshgrid(x, y)
     eval_targets = torch.Tensor(np.vstack([xx.flatten(), yy.flatten()]).T).squeeze()
     norm_eval_targets = (eval_targets - target_m)/target_s
+
+    t_eval = (torch.Tensor(ts).unsqueeze(dim=1) - feat_m)/feat_s
+    with torch.no_grad():
+        pi, sigma, mu = model(t_eval)
+
+    mix = Categorical(pi.squeeze())
+    comp = torch.distributions.Independent(Normal(mu.squeeze(), sigma.squeeze()), 1)
+    gmm = MixtureSameFamily(mix, comp)
+    log_prob_1s = mc_level_set(gmm, 0.68, 5000000)
+    log_prob_2s = mc_level_set(gmm, 0.95, 5000000)
+    log_prob_3s = mc_level_set(gmm, 0.997, 5000000)
+    levels = np.exp(np.array([log_prob_3s, log_prob_2s, log_prob_1s]))
 
     # total_density = np.zeros((n, n, len(ts)))
     total_density = np.zeros((n, n))
@@ -180,11 +195,41 @@ def plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500):
         probs = probs.reshape((n, n))
         # total_density[:, :, i] = probs.detach().numpy()
         total_density +=  probs.detach().numpy()
-
+    print(np.max(total_density))
+    print(np.min(total_density))
     plt.rcParams['text.usetex'] = True
-    plt.figure()
-    plt.contourf(xx, yy, total_density, levels=50, norm=matplotlib.colors.LogNorm())
-    plt.show()
+    fig = plt.figure()
+    cn = plt.contour(xx, yy, total_density, levels=levels, vmin=levels[0], vmax=levels[2], norm=matplotlib.colors.LogNorm())#
+    return cn
+    #plt.show()
+
+def extract_contours(cn):
+    contours = []
+    for cc in cn.collections:
+        paths = []
+        # for each separate section of the contour line
+        for pp in cc.get_paths():
+            xy = []
+            # for each segment of that section
+            for vv in pp.iter_segments():
+                xy.append(vv[0])
+            paths.append(np.vstack(xy))
+        contours.append(paths)
+    with h5py.File("flow_level_sets_mdn.h5", 'w') as f:
+        f.create_dataset('x68', data=contours[0][0][:,0])
+        f.create_dataset('y68', data=contours[0][0][:,1])
+        f.create_dataset('x95', data=contours[1][0][:,0])
+        f.create_dataset('y95', data=contours[1][0][:,1])
+        f.create_dataset('x995', data=contours[2][0][:,0])
+        f.create_dataset('y995', data=contours[2][0][:,1])
+
+def mc_level_set(gm, confidence_level, n_samples):
+    samples = gm.sample(sample_shape=torch.Size([n_samples]))
+    log_probs = gm.log_prob(samples)
+    idx = torch.argsort(log_probs,descending=True)
+    cutoff = int(n_samples*confidence_level)
+    log_prob_crit = log_probs[idx[cutoff]]
+    return log_prob_crit
 
 
 def main(train=False, savepath = "./logs/mdn/mdn.pt"):
@@ -210,11 +255,11 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
         nn.Tanh(),
         nn.Linear(8, 8),
         nn.Tanh(),
-    MDN(8, 2, 5)
+    MDN(8, 2, 10)
     )
 
     if train:
-        optimizer = optim.Adam(model.parameters(), lr=1e-3)
+        optimizer = optim.Adam(model.parameters(), lr=5e-4)
 
         # train the model
         nepochs = 5000
@@ -227,7 +272,7 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
             loss.backward()
             optimizer.step()
             #if epoch % 10 == 99:
-            print(f'{round(epoch)}', end='\n')
+            #print(f'{round(epoch)}', end='\n')
 
         print('Done')
 
@@ -240,7 +285,6 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
         sigma = sigma*target_s
 
         ax = plot_mdn_bicycle(mu, sigma, pi)
-
         plt.gca()
         plt.xlim(0, 90)
         plt.ylim(0, 70)
@@ -274,10 +318,6 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
     eval_targets = torch.Tensor(np.vstack([xx.flatten(), yy.flatten()]).T).squeeze()
     norm_eval_targets = (eval_targets - target_m)/target_s
 
-    print()
-    print(eval_feats.shape)
-    print(eval_targets.shape)
-
     pi_eval, sigma_eval, mu_eval = model(norm_eval_feats)
 
     probs = torch.sum(pi_eval * gaussian_probability(sigma_eval, mu_eval, norm_eval_targets), dim=1)
@@ -291,8 +331,36 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
     plt.contourf(xx, yy, probs.detach().numpy())
     plt.show()
     
-    ts = [12]#np.arange(2, 16, 2)
-    plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500)
+    ts = [13]
+    fig = plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500)
+    extract_contours(fig)    
+    plt.gcf()
+    #plt.show()
+
+    tfinal = 13.0
+    #Try plotting the mean too
+    t_mean = (torch.linspace(0.0, tfinal, 100).unsqueeze(dim=1) - feat_m)/feat_s
+
+    with torch.no_grad():
+        pi_t, sigma_t, mu_t = model(t_mean)
+
+    mu_temp = [pi_t[i] * mu_t[i, :, :].T for i in range(pi_t.shape[0])]
+    print(len(mu_temp))
+    mu_total = torch.vstack([torch.sum(m, dim=1) for m in mu_temp])
+    mu_total = mu_total*target_s + target_m
+
+    #plt.figure()
+    plt.plot(mu_total[:, 0], mu_total[:, 1], color='k', linewidth=2)
+    plt.scatter(data["position"][0, :], data["position"][1, :], s=0.1, color="gray")
+    plt.grid()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.xlim([0, 90])
+    plt.ylim([0, 60])
+    plt.show()
+
+    print(data["position"].shape)
+    #plt.scatter()
 
 
 
