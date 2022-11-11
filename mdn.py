@@ -164,7 +164,7 @@ def plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500, 
     # grid the space
     model.eval()
     x = np.linspace(0, 90, n)
-    y = np.linspace(0, 50, n)
+    y = np.linspace(0, 70, n)
     xx, yy = np.meshgrid(x, y)
     eval_targets = torch.Tensor(np.vstack([xx.flatten(), yy.flatten()]).T).squeeze()
     norm_eval_targets = (eval_targets - target_m)/target_s
@@ -212,9 +212,11 @@ def extract_contours(cn):
             xy = []
             # for each segment of that section
             for vv in pp.iter_segments():
+                print(len(vv))
                 xy.append(vv[0])
             paths.append(np.vstack(xy))
         contours.append(paths)
+
     with h5py.File("flow_level_sets_mdn.h5", 'w') as f:
         f.create_dataset('x68', data=contours[0][0][:,0])
         f.create_dataset('y68', data=contours[0][0][:,1])
@@ -242,12 +244,14 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
     feat_m = torch.mean(train_feats)
     feat_s = torch.std(train_feats)
     train_feats = (train_feats - feat_m)/feat_s
+    train_feats = train_feats[:50000, :]
 
     train_targets = torch.Tensor(data["position"][:].T)
     print(train_targets.shape)
     target_m = torch.mean(train_targets, dim=0)
     target_s = torch.std(train_targets, dim=0)
     train_targets = (train_targets - target_m)/target_s
+    train_targets = train_targets[:50000, :]
 
     # initialize the model
     model = nn.Sequential(
@@ -259,10 +263,10 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
     )
 
     if train:
-        optimizer = optim.Adam(model.parameters(), lr=5e-4)
+        optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
         # train the model
-        nepochs = 5000
+        nepochs = 1000
         loss_history = torch.zeros(nepochs)
         for epoch in range(nepochs):
             model.zero_grad()
@@ -272,7 +276,7 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
             loss.backward()
             optimizer.step()
             #if epoch % 10 == 99:
-            #print(f'{round(epoch)}', end='\n')
+            print(f'{round(epoch)}', end='\n')
 
         print('Done')
 
@@ -365,4 +369,4 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
 
 
 if __name__ == "__main__":
-    main(train=False, savepath="./logs/mdn/mdn.pt")
+    main(train=False, savepath="./logs/mdn/mdn_dense.pt")
