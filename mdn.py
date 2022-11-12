@@ -164,7 +164,7 @@ def plot_density_discrete(model, ts, feat_m, feat_s, target_m, target_s, n=500, 
     # grid the space
     model.eval()
     x = np.linspace(0, 90, n)
-    y = np.linspace(0, 70, n)
+    y = np.linspace(-20, 70, n)
     xx, yy = np.meshgrid(x, y)
     eval_targets = torch.Tensor(np.vstack([xx.flatten(), yy.flatten()]).T).squeeze()
     norm_eval_targets = (eval_targets - target_m)/target_s
@@ -360,7 +360,7 @@ def main(train=False, savepath = "./logs/mdn/mdn.pt"):
     plt.xlabel("x")
     plt.ylabel("y")
     plt.xlim([0, 90])
-    plt.ylim([0, 60])
+    plt.ylim([-20, 70])
     plt.show()
 
     print(data["position"].shape)
