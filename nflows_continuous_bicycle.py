@@ -212,3 +212,25 @@ with h5py.File("flow_level_sets.h5", 'w') as f:
     f.create_dataset('x995', data=region3.squeeze()[:,0])
     f.create_dataset('y995', data=region3.squeeze()[:,1])
 # %%
+# UKF samples
+mu_ukf = np.array([65.1842,  31.667])
+Sigma_ukf = np.array([[27.1505,  -54.2592], [-54.2592,  115.653]])
+samples_ukf = np.random.multivariate_normal(mu_ukf, Sigma_ukf, 1000)
+plt.scatter(samples_ukf[:, 0], samples_ukf[:, 1], s = 1);
+# %%
+with h5py.File("samples_ukf.h5", 'w') as f:
+    f.create_dataset('samples', data=samples_ukf)
+
+# %%
+with h5py.File("bicycle_dataset_continuous.h5", 'r') as f:
+    position, time = np.array(f.get("position")), np.array(f.get("time"))
+
+position = torch.Tensor(position).T
+time = torch.Tensor(time)
+
+context_time = time==13.0
+
+sample_truth = position[context_time, :][:1000]
+# %%
+with h5py.File("samples_truth.h5", 'w') as f:
+    f.create_dataset('samples', data=sample_truth)
