@@ -100,7 +100,7 @@ def read_dataset(fname):
     return torch.Tensor(dataset)
 
 def read_bicycle_dataset(fname):
-    with h5py.File("bicycle_dataset_discrete.h5", 'r') as f:
+    with h5py.File(fname, 'r') as f:
         position, time = np.array(f.get("position")), np.array(f.get("time"))
     
     return torch.Tensor(position).T, torch.Tensor(time)
