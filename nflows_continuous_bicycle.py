@@ -204,6 +204,7 @@ plt.scatter(noise[:, 0], noise[:, 1], s = 1);
 plt.plot(ex, ey)
 
 # %%
+'''
 with h5py.File("flow_level_sets.h5", 'w') as f:
     f.create_dataset('x68', data=region1.squeeze()[:,0])
     f.create_dataset('y68', data=region1.squeeze()[:,1])
@@ -236,3 +237,4 @@ with h5py.File("samples_truth.h5", 'w') as f:
     f.create_dataset('samples', data=sample_truth)
 
 # %%
+'''
