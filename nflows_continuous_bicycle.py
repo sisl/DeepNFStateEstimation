@@ -234,3 +234,5 @@ sample_truth = position[context_time, :][:1000]
 # %%
 with h5py.File("samples_truth.h5", 'w') as f:
     f.create_dataset('samples', data=sample_truth)
+
+# %%
