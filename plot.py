@@ -1,8 +1,11 @@
+import os
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import functorch
 from utils import reference, color_grid, color_dataset
+import glob
+from PIL import Image
 
 def plot_density(model, x, i, base_name, comparison=False):
     model.eval()
@@ -192,3 +195,17 @@ def plot_jacobian_determinant(model, x ,base_name):
     plt.clf()
 
     model.train()
+
+def make_gif(frame_folder, out_path, delete_frames=True):
+    files = [f for f in glob.glob(f"{frame_folder}/*.png")]
+    #print(files)
+    files = sorted(files)
+    frames = [Image.open(image) for image in files]
+    
+    frame_one = frames[0]
+    frame_one.save(out_path, format="GIF", append_images=frames,
+               save_all=True, duration=1000, loop=0)
+
+    if delete_frames:
+        for f in files:
+            os.remove(f)
