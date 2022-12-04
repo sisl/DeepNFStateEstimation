@@ -65,7 +65,7 @@ feat_lens = torch.Tensor([f.shape[0] for f in feats])
 
 #%%
 # pad/pack features
-pad_val = -1.0
+pad_val = torch.nan
 feats_padded = torch.nn.utils.rnn.pad_sequence(feats, batch_first=batch_first, padding_value=pad_val).to(torch.float32)
 feats_packed = torch.nn.utils.rnn.pack_padded_sequence(feats_padded, feat_lens, batch_first=batch_first, enforce_sorted=False)
 
@@ -99,12 +99,17 @@ class GRUContextEncoder(nn.Module):
             num_layers=self.layers
         )
 
-        self.linear = nn.Linear(in_features=hidden_size*seq_len, out_features=out_features)
+        #self.linear = nn.Linear(in_features=hidden_size*seq_len, out_features=out_features)
+        self.linear = nn.Linear(in_features=hidden_size, out_features=out_features)
 
     def forward(self, x):
-        batch_size = x.shape[0]
-        gru_out, hn = self.gru(x)
-        out = self.linear(gru_out.reshape(batch_size, -1)).squeeze()
+        my_list = []
+        for context in x:
+            mask = ~torch.isnan(context)
+            my_list.append(context[mask].reshape(-1, 3))
+        padded = torch.nn.utils.rnn.pack_sequence(my_list, enforce_sorted=False)
+        gru_out, hn = self.gru(padded)
+        out = self.linear(hn.squeeze()).squeeze()
         return out
 
 #%%
@@ -155,7 +160,6 @@ for i in range(num_iter):
         
         with torch.no_grad():
             ctx_test = feats_padded[100, :, :]
-            print(ctx_test)
             zgrid = flow.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
 
         new_xline = (xline*pos_std[0])+pos_mean[0]
@@ -203,9 +207,8 @@ for i in range(min_seq_len, seq_lens[seq_idx]):
     plt.title('t = {}'.format(i + 1))
     plt.xlim((0, 100))
     plt.ylim((-10, 60))
-    #plt.savefig("./figs/experiments/gru/tmp/tmp_{:03d}.png".format(i))
+    plt.savefig("./figs/experiments/gru/tmp/tmp_{:03d}.png".format(i))
     plt.show()
 
-#make_gif("./figs/experiments/gru/tmp/", "./figs/experiments/gru/seq0.gif", delete_frames=True)
-
+make_gif("./figs/experiments/gru/tmp/", "./figs/experiments/gru/seq0.gif", delete_frames=True)
 # %%
