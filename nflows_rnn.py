@@ -73,16 +73,16 @@ feats_padded = torch.nn.utils.rnn.pad_sequence(
     feats, batch_first=batch_first, padding_value=pad_val).to(torch.float32)
 
 #%%
-# GRU Module
-class GRUContextEncoder(nn.Module):
-    """ GRU Context Encoder
+# RNN Module
+class RNNContextEncoder(nn.Module):
+    """ RNN Context Encoder
 
     Args:
         input_features (int): Number of input features in input sequences.
         hidden_size (int): Number of hidden units.            
         out_features (int): Number of output features.
         seq_len (int): Input sequence lengths.
-        layers (int): GRU layers.
+        layers (int): RNN layers.
 
     """
     def __init__(self, input_features, hidden_size, out_features, seq_len=31, layers=1):
@@ -92,7 +92,7 @@ class GRUContextEncoder(nn.Module):
         self.layers = layers
         self.seq_len = seq_len
 
-        self.gru = nn.GRU(
+        self.rnn = nn.RNN(
             input_size=input_features,
             hidden_size=hidden_size,
             batch_first=True,
@@ -107,7 +107,7 @@ class GRUContextEncoder(nn.Module):
             mask = ~torch.isnan(ctx)
             masked_ctx.append(ctx[mask].reshape(-1, 3))
         padded = torch.nn.utils.rnn.pack_sequence(masked_ctx, enforce_sorted=False)
-        gru_out, hn = self.gru(padded)
+        rnn_out, hn = self.rnn(padded)
         out = self.linear(hn.squeeze()).squeeze()
         return out
 
@@ -116,7 +116,7 @@ class GRUContextEncoder(nn.Module):
 input_size = 3
 hidden_size = 4
 embed_size = 4
-gru_encoder = GRUContextEncoder(input_size, hidden_size, embed_size)
+rnn_encoder = RNNContextEncoder(input_size, hidden_size, embed_size)
 
 #%%
 # Define the latent base distribution
@@ -135,7 +135,7 @@ for _ in range(num_layers):
         context_features=4,
         use_batch_norm=False))
 transform = CompositeTransform(transform_list)
-flow = Flow(transform, base_dist, embedding_net=gru_encoder)
+flow = Flow(transform, base_dist, embedding_net=rnn_encoder)
 
 # Define the optimizer
 optimizer = optim.Adam(flow.parameters(), lr=1e-3)
@@ -183,11 +183,11 @@ for i in range(num_iter):
         plt.show()
 
 # Save the loss data
-np.savetxt("figs/loss/gru_loss.csv", loss_arr)
+np.savetxt("figs/loss/rnn_loss.csv", loss_arr)
 
 #%%
 # Make a gif
-seq_idx = 0
+seq_idx = 12
 test_obs = obs_seqs[seq_idx]
 test_pos = pos_seqs[seq_idx]
 
@@ -218,7 +218,9 @@ for i in range(min_seq_len, seq_lens[seq_idx]):
     plt.title('t = {}'.format(i + 1))
     plt.xlim((0, 100))
     plt.ylim((-10, 60))
-    plt.savefig("./figs/experiments/gru/tmp/tmp_{:03d}.png".format(i))
+    plt.savefig("./figs/experiments/rnn/tmp/tmp_{:03d}.png".format(i))
     plt.show()
 
-make_gif("./figs/experiments/gru/tmp/", "./figs/experiments/gru/seq0.gif", delete_frames=True)
+make_gif("./figs/experiments/rnn/tmp/", "./figs/experiments/rnn/seq12.gif", delete_frames=True)
+
+# %%
