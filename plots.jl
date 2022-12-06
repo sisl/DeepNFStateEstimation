@@ -1,13 +1,15 @@
 #=
 plots.jl:
     A file containing functions for reading stored experimental data and
-    generating plots of level sets
+    generating plots of level sets and loss curves
 =#
 
 ##
 #*******************************************************************************
 # PACKAGES AND SETUP
 #*******************************************************************************
+using CSV
+using DataFrames
 using Distributions
 using HDF5
 using LinearAlgebra
@@ -322,3 +324,7 @@ push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
 
 save("figs/vae_level_sets.pdf", a)
 save("figs/vae_level_sets.tex", a, include_preamble=true)
+
+##
+gru_loss = CSV.read("figs/loss/gru_loss.csv", DataFrame; header=false).Column1
+rnn_loss = CSV.read("figs/loss/rnn_loss.csv", DataFrame; header=false).Column1
