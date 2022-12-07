@@ -32,7 +32,9 @@ time = torch.Tensor(time)
 
 obs_sigma = 1.0
 obs = copy.deepcopy(position)
-obs += np.random.normal(0.0, obs_sigma, obs.shape)
+
+torch.manual_seed(3456271)
+obs += torch.distributions.Normal(0.0,obs_sigma).sample(obs.shape)
 #obs = (position - pos_mean)/pos_std
 
 pos_mean = torch.mean(obs, dim=0)
