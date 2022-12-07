@@ -24,7 +24,7 @@ from nflows.transforms import LULinear
 from nflows.utils import torchutils
 
 # %%
-with h5py.File("bicycle_dataset_bimodal.h5", 'r') as f:
+with h5py.File("data/bicycle_dataset_bimodal.h5", 'r') as f:
     position, time = np.array(f.get("position")), np.array(f.get("time"))
 
 position = torch.Tensor(position).T
@@ -115,11 +115,11 @@ for _ in range(num_layers):
         use_batch_norm=False))
 transform = CompositeTransform(transform_list)
 
-flow = Flow(transform, base_dist, embedding_net=transformer_encoder)
-optimizer = optim.Adam(flow.parameters(), lr=1e-3)
+flow_transformer = Flow(transform, base_dist, embedding_net=transformer_encoder)
+optimizer = optim.Adam(flow_transformer.parameters(), lr=1e-3)
 
 
-num_iter = 5000
+num_iter = 3000
 loss_arr = []
 for i in range(num_iter):
     indices = torch.randperm(feats.shape[0])[:2048].to(int)
@@ -127,14 +127,14 @@ for i in range(num_iter):
     ctx = feats[indices, :, :]
 
     optimizer.zero_grad()
-    loss = -flow.log_prob(inputs=x, context=ctx).mean()
+    loss = -flow_transformer.log_prob(inputs=x, context=ctx).mean()
     loss_arr.append(loss.detach())
     loss.backward()
     print(f"Iteration {i+1}/{num_iter} - Loss: {loss.detach().item()}")
     optimizer.step()
     
     if (i + 1) % 500 == 0:
-        flow.eval()
+        flow_transformer.eval()
         xline = torch.linspace(-4.0, 4.0, 200)
         yline = torch.linspace(-4.0, 4.0, 200)
         xgrid, ygrid = torch.meshgrid(xline, yline)
@@ -143,7 +143,7 @@ for i in range(num_iter):
         with torch.no_grad():
             ctx_test = feats[100, :, :]
             print(ctx_test)
-            zgrid = flow.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
+            zgrid = flow_transformer.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
 
         new_xline = (xline*pos_std[0])+pos_mean[0]
         new_yline = (yline*pos_std[1])+pos_mean[1]
@@ -157,14 +157,14 @@ for i in range(num_iter):
         plt.scatter(m[0], m[1], color='r', s=20)
         plt.title('iteration {}'.format(i + 1))
         plt.savefig(f"./figs/experiments/transformer/training_{i}.png")
-        flow.train()
+        flow_transformer.train()
 #%%
 #save loss array
 np.savetxt("figs/loss/transformer_loss.csv",loss_arr)
 
 #%% 
 #evaluate the log likelihood of the model
-flow.eval()
+flow_transformer.eval()
 idx = torch.arange(feats.shape[0])
 idx_list = torch.split(idx,8192)
 sum_log_probs = 0
@@ -172,17 +172,17 @@ for ix in tqdm(idx_list):
     x = inputs[ix, :]
     ctx = feats[ix, :, :]
     with torch.inference_mode():
-        log_prob = flow.log_prob(inputs=x, context=ctx).detach().sum().item()
+        log_prob = flow_transformer.log_prob(inputs=x, context=ctx).detach().sum().item()
     sum_log_probs += log_prob
 
 mean_log_probs = sum_log_probs/idx.shape[0]
 print(f"Model Score: {mean_log_probs}")
-flow.train()
+flow_transformer.train()
 print("stop")
 
 #%%
 # Make a gif
-flow.eval()
+flow_transformer.eval()
 seq_idx = 6
 test_obs = obs_seqs[seq_idx]
 test_pos = pos_seqs[seq_idx]
@@ -202,7 +202,7 @@ for i in range(min_seq_len, seq_lens[seq_idx]):
     with torch.no_grad():
         ctx_test[:, 0:2] = test_obs[(i-min_seq_len):i, :]
         ctx_test[:, 2] = time_seqs[seq_idx][i-min_seq_len:i]
-        zgrid = flow.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
+        zgrid = flow_transformer.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
 
     plt.contourf(new_xgrid.numpy(), new_ygrid.numpy(), zgrid.numpy(), levels = 500, cmap="viridis")
 
@@ -221,7 +221,7 @@ make_gif("./figs/experiments/transformer/tmp/", "./figs/experiments/transformer/
 #%%
 # Make a gif
 plt.clf()
-flow.eval()
+flow_transformer.eval()
 seq_idx = 12
 test_obs = obs_seqs[seq_idx]
 test_pos = pos_seqs[seq_idx]
@@ -241,7 +241,7 @@ for i in range(min_seq_len, seq_lens[seq_idx]):
     with torch.no_grad():
         ctx_test[:, 0:2] = test_obs[(i-min_seq_len):i, :]
         ctx_test[:, 2] = time_seqs[seq_idx][i-min_seq_len:i]
-        zgrid = flow.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
+        zgrid = flow_transformer.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
 
     plt.contourf(new_xgrid.numpy(), new_ygrid.numpy(), zgrid.numpy(), levels = 500, cmap="viridis")
 
@@ -256,3 +256,88 @@ for i in range(min_seq_len, seq_lens[seq_idx]):
     # plt.show()
 
 make_gif("./figs/experiments/transformer/tmp/", "./figs/experiments/transformer/seq12.gif", delete_frames=True)
+
+#%%
+# Extract level sets
+
+# Define the context (time that we're conditioning on)
+flow_transformer.eval()
+seq_idx = 6
+test_obs = obs_seqs[seq_idx]
+test_pos = pos_seqs[seq_idx]
+test_times = time_seqs[seq_idx]
+
+xline = torch.linspace(-4.0, 4.0, 200)
+yline = torch.linspace(-4.0, 4.0, 200)
+xgrid, ygrid = torch.meshgrid(xline, yline)
+xyinput = torch.cat([xgrid.reshape(-1, 1), ygrid.reshape(-1, 1)], dim=1)
+new_xline = (xline*pos_std[0])+pos_mean[0]
+new_yline = (yline*pos_std[1])+pos_mean[1]
+new_xgrid, new_ygrid = torch.meshgrid(new_xline, new_yline)
+
+ctx_test = torch.zeros(5, 3, dtype=torch.float32)
+
+i = 10
+with torch.no_grad():
+    ctx_test[0:i, 0:2] = test_obs[i-5:i, :]
+    ctx_test[0:i, 2] = time_seqs[seq_idx][i-5:i]
+
+ctx_test = ctx_test.unsqueeze(0)
+
+embedded_context = flow_transformer._embedding_net(ctx_test)
+rep_embedded_context = torchutils.repeat_rows(embedded_context.unsqueeze(0), num_reps=400)
+
+params = flow_transformer._distribution._compute_params(embedded_context.unsqueeze(0))
+
+log_stds = params[1].detach().squeeze()
+mu = params[0].detach().squeeze().numpy()
+
+Sigma = torch.diag((log_stds).exp()**2).numpy()
+
+p1 = 0.68; p2 = 0.95; p3 = 0.995
+
+def error_ellipse(mu, Sigma, prob):
+    r = np.sqrt(-2*np.log(1-prob))
+    angles = torch.linspace(0, 2*np.pi, 400)
+    cx = [r*np.cos(a) for a in angles];
+    cy = [r*np.sin(a) for a in angles];
+
+    ellipse = np.matmul(sqrtm(Sigma), (np.vstack([cx, cy]))) + np.reshape(mu, (2,1))
+    ellipse = torch.Tensor(ellipse)
+
+    ex = ellipse[0,:]; ey = ellipse[1,:]
+
+    return ex, ey
+
+ex1, ey1 = error_ellipse(mu, Sigma, p1)
+ex2, ey2 = error_ellipse(mu, Sigma, p2)
+ex3, ey3 = error_ellipse(mu, Sigma, p3)
+
+circle1 = torch.stack([ex1, ey1]).T
+circle2 = torch.stack([ex2, ey2]).T
+circle3 = torch.stack([ex3, ey3]).T
+
+region1, _ = flow_transformer._transform.inverse(circle1, context = rep_embedded_context)
+region2, _ = flow_transformer._transform.inverse(circle2, context = rep_embedded_context)
+region3, _ = flow_transformer._transform.inverse(circle3, context = rep_embedded_context)
+
+region1 = torchutils.split_leading_dim(region1, shape=[-1, 400])
+region2 = torchutils.split_leading_dim(region2, shape=[-1, 400])
+region3 = torchutils.split_leading_dim(region3, shape=[-1, 400])
+
+region1 = (region1.detach()*pos_std)+pos_mean
+region2 = (region2.detach()*pos_std)+pos_mean
+region3 = (region3.detach()*pos_std)+pos_mean
+
+fig, axs = plt.subplots(1, 2)
+axs[0].plot(ex1, ey1); axs[0].plot(ex2, ey2); axs[0].plot(ex3, ey3); 
+axs[0].set_aspect('equal'); axs[0].grid(True)
+axs[0].set_title("Latent Space")
+
+axs[1].plot(region1.squeeze()[:,0], region1.squeeze()[:,1]); 
+axs[1].plot(region2.squeeze()[:,0], region2.squeeze()[:,1]); 
+axs[1].plot(region3.squeeze()[:,0], region3.squeeze()[:,1]); 
+
+axs[1].set_aspect('equal'); axs[1].grid(True)
+axs[1].set_title("Driving Scene")
+# %%
