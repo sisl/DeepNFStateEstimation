@@ -48,6 +48,20 @@ function bicycle_dynamics(s; withNoise = false)
     return s′
 end
 
+# Nominal transition function for kinematic bicycle model: 𝐱 = [x y θ v ϕ t]'
+# Note: rear-axle reference model
+function bicycle_dynamics_switch(s, ψ; withNoise = false)
+    x = s[1]; y = s[2]; θ = s[3]; v = s[4]; ϕ = s[5]; t = s[6]
+    x′ = x + Δt*(v*cos(θ))
+    y′ = y + Δt*(v*sin(θ))
+    θ′ = θ + Δt*v*tan(ϕ)/L
+    v′ = v + withNoise*rand(Normal(0.0, σv))
+    ϕ′ = ϕ + ψ*Δt*0.1*0.5*cos(0.5*t) + withNoise*rand(Normal(0.0, σϕ))
+    t′ = t + Δt*1
+    s′ = [x′; y′; θ′; v′; ϕ′; t′]
+    return s′
+end
+
 # Uncented transform
 function unscented_transform(μ, Σ, λ, T, ws, n)
     # Enforce that the matrix is Hermitian
@@ -326,6 +340,180 @@ save("figs/vae_level_sets.pdf", a)
 save("figs/vae_level_sets.tex", a, include_preamble=true)
 
 ##
+#*******************************************************************************
+# RNN LEVEL SETS
+#*******************************************************************************
+fid = h5open("flow_level_sets_rnn.h5", "r")
+
+x68 = Float64.(read(fid["x68"]))
+y68 = Float64.(read(fid["y68"]))
+x95 = Float64.(read(fid["x95"]))
+y95 = Float64.(read(fid["y95"]))
+x995 = Float64.(read(fid["x995"]))
+y995 = Float64.(read(fid["y995"]))
+
+close(fid)
+
+fid = h5open("observation_sequence.h5", "r")
+
+obs_x = Float64.(read(fid["obs_x"]))
+obs_y = Float64.(read(fid["obs_y"]))
+
+close(fid)
+
+s0 = [x0, y0, θ0, v0, ϕ0, t0]
+t = round(Int, 5.5/Δt)
+
+t_final = lastindex(times)
+τ_arr = simulate_τ(1, s0, s->bicycle_dynamics(s, withNoise=false), t, drop_rate=0.0);
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+
+s_switch = τ_arr[end][end]
+
+τ_arr_right = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, 1, withNoise=false), t_final-t, drop_rate=0.0);
+x_right = [s[1] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+y_right = [s[2] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+
+τ_arr_left = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, -1, withNoise=false), t_final-t, drop_rate=0.0);
+x_left = [s[1] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+y_left = [s[2] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+
+##
+a = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqualImage=true,
+            xlabel="x", ylabel="y",title="RNN Level Sets", xmin = 0, xmax = 90,
+            legendPos = "north east",legendStyle="nodes = {scale = 0.75}")#,  view="{0}{90}")
+push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_right, y_right, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_left, y_left, style = "black, thick"))
+push!(a, PGFPlots.Linear(x68, y68, style = "viridis1, thick, solid"))
+push!(a, PGFPlots.Linear(x95, y95, style = "viridis2, thick, solid"))
+push!(a, PGFPlots.Linear(x995, y995, style = "viridis3, thick, solid"))
+push!(a, PGFPlots.Linear(obs_x, obs_y, style = "only marks,dark_red, mark options=
+    {scale=0.5,fill=dark_red, solid, mark = *}"))
+save("figs/rnn_level_sets.pdf", a)
+save("figs/rnn_level_sets.tex", a, include_preamble=true)
+
+##
+#*******************************************************************************
+# GRU LEVEL SETS
+#*******************************************************************************
+fid = h5open("flow_level_sets_gru.h5", "r")
+
+x68 = Float64.(read(fid["x68"]))
+y68 = Float64.(read(fid["y68"]))
+x95 = Float64.(read(fid["x95"]))
+y95 = Float64.(read(fid["y95"]))
+x995 = Float64.(read(fid["x995"]))
+y995 = Float64.(read(fid["y995"]))
+
+close(fid)
+
+fid = h5open("observation_sequence.h5", "r")
+
+obs_x = Float64.(read(fid["obs_x"]))
+obs_y = Float64.(read(fid["obs_y"]))
+
+close(fid)
+
+s0 = [x0, y0, θ0, v0, ϕ0, t0]
+t = round(Int, 5.5/Δt)
+
+t_final = lastindex(times)
+τ_arr = simulate_τ(1, s0, s->bicycle_dynamics(s, withNoise=false), t, drop_rate=0.0);
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+
+s_switch = τ_arr[end][end]
+
+τ_arr_right = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, 1, withNoise=false), t_final-t, drop_rate=0.0);
+x_right = [s[1] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+y_right = [s[2] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+
+τ_arr_left = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, -1, withNoise=false), t_final-t, drop_rate=0.0);
+x_left = [s[1] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+y_left = [s[2] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+
+##
+a = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqualImage=true,
+            xlabel="x", ylabel="y",title="GRU Level Sets", xmin = 0, xmax = 90,
+            legendPos = "north east",legendStyle="nodes = {scale = 0.75}")#,  view="{0}{90}")
+push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_right, y_right, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_left, y_left, style = "black, thick"))
+push!(a, PGFPlots.Linear(x68, y68, style = "viridis1, thick, solid"))
+push!(a, PGFPlots.Linear(x95, y95, style = "viridis2, thick, solid"))
+push!(a, PGFPlots.Linear(x995, y995, style = "viridis3, thick, solid"))
+push!(a, PGFPlots.Linear(obs_x, obs_y, style = "only marks,dark_red, mark options=
+    {scale=0.5,fill=dark_red, solid, mark = *}"))
+save("figs/gru_level_sets.pdf", a)
+save("figs/gru_level_sets.tex", a, include_preamble=true)
+
+##
+#*******************************************************************************
+# LSTM LEVEL SETS
+#*******************************************************************************
+fid = h5open("flow_level_sets_lstm.h5", "r")
+
+x68 = Float64.(read(fid["x68"]))
+y68 = Float64.(read(fid["y68"]))
+x95 = Float64.(read(fid["x95"]))
+y95 = Float64.(read(fid["y95"]))
+x995 = Float64.(read(fid["x995"]))
+y995 = Float64.(read(fid["y995"]))
+
+close(fid)
+
+fid = h5open("observation_sequence.h5", "r")
+
+obs_x = Float64.(read(fid["obs_x"]))
+obs_y = Float64.(read(fid["obs_y"]))
+
+close(fid)
+
+s0 = [x0, y0, θ0, v0, ϕ0, t0]
+t = round(Int, 5.5/Δt)
+
+t_final = lastindex(times)
+τ_arr = simulate_τ(1, s0, s->bicycle_dynamics(s, withNoise=false), t, drop_rate=0.0);
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+
+s_switch = τ_arr[end][end]
+
+τ_arr_right = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, 1, withNoise=false), t_final-t, drop_rate=0.0);
+x_right = [s[1] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+y_right = [s[2] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+
+τ_arr_left = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, -1, withNoise=false), t_final-t, drop_rate=0.0);
+x_left = [s[1] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+y_left = [s[2] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+
+##
+a = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqualImage=true,
+            xlabel="x", ylabel="y",title="LSTM Level Sets", xmin = 0, xmax = 90,
+            legendPos = "north east",legendStyle="nodes = {scale = 0.75}")#,  view="{0}{90}")
+push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_right, y_right, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_left, y_left, style = "black, thick"))
+push!(a, PGFPlots.Linear(x68, y68, style = "viridis1, thick, solid"))
+push!(a, PGFPlots.Linear(x95, y95, style = "viridis2, thick, solid"))
+push!(a, PGFPlots.Linear(x995, y995, style = "viridis3, thick, solid"))
+push!(a, PGFPlots.Linear(obs_x, obs_y, style = "only marks,dark_red, mark options=
+    {scale=0.5,fill=dark_red, solid, mark = *}"))
+save("figs/lstm_level_sets.pdf", a)
+save("figs/lstm_level_sets.tex", a, include_preamble=true)
+
+##
+#*******************************************************************************
+# LOSS CURVES
+#*******************************************************************************
 rnn_loss = CSV.read("figs/loss/rnn_loss.csv", DataFrame; header=false).Column1
 lstm_loss = CSV.read("figs/loss/lstm_loss.csv", DataFrame; header=false).Column1
 gru_loss = CSV.read("figs/loss/gru_loss.csv", DataFrame; header=false).Column1

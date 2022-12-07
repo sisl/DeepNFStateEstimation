@@ -6,6 +6,8 @@ import functorch
 from utils import reference, color_grid, color_dataset
 import glob
 from PIL import Image
+from nflows.utils import torchutils
+from scipy.linalg import sqrtm
 
 def plot_density(model, x, i, base_name, comparison=False):
     model.eval()
@@ -209,3 +211,16 @@ def make_gif(frame_folder, out_path, delete_frames=True):
     if delete_frames:
         for f in files:
             os.remove(f)
+
+def error_ellipse(mu, Sigma, prob, n_points):
+    r = np.sqrt(-2*np.log(1-prob))
+    angles = torch.linspace(0, 2*np.pi, n_points)
+    cx = [r*np.cos(a) for a in angles];
+    cy = [r*np.sin(a) for a in angles];
+
+    ellipse = np.matmul(sqrtm(Sigma), (np.vstack([cx, cy]))) + np.reshape(mu, (2,1))
+    ellipse = torch.Tensor(ellipse)
+
+    ex = ellipse[0,:]; ey = ellipse[1,:]
+
+    return ex, ey

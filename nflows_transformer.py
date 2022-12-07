@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import sqrtm
 import copy
-from plot import make_gif
+from plot import make_gif, error_ellipse
 from transformer_utils import TransformerEmbedding
 from tqdm import tqdm
 
@@ -33,7 +33,7 @@ time = torch.Tensor(time)
 obs_sigma = 1.0
 obs = copy.deepcopy(position)
 
-torch.manual_seed(3456271)
+torch.manual_seed(94305)
 obs += torch.distributions.Normal(0.0,obs_sigma).sample(obs.shape)
 #obs = (position - pos_mean)/pos_std
 
@@ -120,8 +120,8 @@ transform = CompositeTransform(transform_list)
 flow_transformer = Flow(transform, base_dist, embedding_net=transformer_encoder)
 optimizer = optim.Adam(flow_transformer.parameters(), lr=1e-3)
 
-
-num_iter = 3000
+torch.manual_seed(16670)#71384
+num_iter = 10000
 loss_arr = []
 for i in range(num_iter):
     indices = torch.randperm(feats.shape[0])[:2048].to(int)
@@ -160,12 +160,16 @@ for i in range(num_iter):
         plt.title('iteration {}'.format(i + 1))
         plt.savefig(f"./figs/experiments/transformer/training_{i}.png")
         flow_transformer.train()
-#%%
+
 #save loss array
 np.savetxt("figs/loss/transformer_loss.csv",loss_arr)
 
 #%% 
-#evaluate the log likelihood of the model
+'''
+********************************************************************************
+Evaluate the log likelihood of the model
+********************************************************************************
+'''
 flow_transformer.eval()
 idx = torch.arange(feats.shape[0])
 idx_list = torch.split(idx,8192)
@@ -182,13 +186,17 @@ print(f"Model Score: {mean_log_probs}")
 flow_transformer.train()
 print("stop")
 
-#%%
-# Make a gif
-flow_transformer.eval()
-seq_idx = 6
-test_obs = obs_seqs[seq_idx]
-test_pos = pos_seqs[seq_idx]
-test_times = time_seqs[seq_idx]
+# %%
+'''
+********************************************************************************
+Make a contour plot
+********************************************************************************
+'''
+seq_idx = 6 # sequence index
+i = 10      # time step in the sequence
+
+obs = obs_seqs[seq_idx]
+pos = pos_seqs[seq_idx]
 
 xline = torch.linspace(-4.0, 4.0, 200)
 yline = torch.linspace(-4.0, 4.0, 200)
@@ -198,96 +206,107 @@ new_xline = (xline*pos_std[0])+pos_mean[0]
 new_yline = (yline*pos_std[1])+pos_mean[1]
 new_xgrid, new_ygrid = torch.meshgrid(new_xline, new_yline)
 
-ctx_test = torch.zeros(5, 3, dtype=torch.float32)
+context = torch.zeros(5, 3, dtype=torch.float32)
 
-for i in range(min_seq_len, seq_lens[seq_idx]):    
-    with torch.no_grad():
-        ctx_test[:, 0:2] = test_obs[(i-min_seq_len):i, :]
-        ctx_test[:, 2] = time_seqs[seq_idx][i-min_seq_len:i]
-        zgrid = flow_transformer.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
-
-    plt.contourf(new_xgrid.numpy(), new_ygrid.numpy(), zgrid.numpy(), levels = 500, cmap="viridis")
-
-    state_i = (test_pos[:i, :] * pos_std + pos_mean).numpy()
-    obs_i = (test_obs[:i, :] * pos_std + pos_mean).numpy()
-    plt.scatter(obs_i[:, 0], obs_i[:, 1], color='k', s=3)
-    plt.plot(state_i[:, 0], state_i[:, 1], '--', color='r')
-    plt.title('t = {}'.format(i + 1))
-    plt.xlim((0, 100))
-    plt.ylim((-10, 60))
-    plt.savefig("./figs/experiments/transformer/tmp/tmp_{:03d}.png".format(i))
-    # plt.show()
-
-make_gif("./figs/experiments/transformer/tmp/", "./figs/experiments/transformer/seq6.gif", delete_frames=True)
-
-#%%
-# Make a gif
-plt.clf()
-flow_transformer.eval()
-seq_idx = 12
-test_obs = obs_seqs[seq_idx]
-test_pos = pos_seqs[seq_idx]
-test_times = time_seqs[seq_idx]
-
-xline = torch.linspace(-4.0, 4.0, 200)
-yline = torch.linspace(-4.0, 4.0, 200)
-xgrid, ygrid = torch.meshgrid(xline, yline)
-xyinput = torch.cat([xgrid.reshape(-1, 1), ygrid.reshape(-1, 1)], dim=1)
-new_xline = (xline*pos_std[0])+pos_mean[0]
-new_yline = (yline*pos_std[1])+pos_mean[1]
-new_xgrid, new_ygrid = torch.meshgrid(new_xline, new_yline)
-
-ctx_test = torch.zeros(5, 3, dtype=torch.float32)
-
-for i in range(min_seq_len, seq_lens[seq_idx]):    
-    with torch.no_grad():
-        ctx_test[:, 0:2] = test_obs[(i-min_seq_len):i, :]
-        ctx_test[:, 2] = time_seqs[seq_idx][i-min_seq_len:i]
-        zgrid = flow_transformer.log_prob(xyinput, ctx_test.repeat(40000, 1, 1)).exp().reshape(200, 200)
-
-    plt.contourf(new_xgrid.numpy(), new_ygrid.numpy(), zgrid.numpy(), levels = 500, cmap="viridis")
-
-    state_i = (test_pos[:i, :] * pos_std + pos_mean).numpy()
-    obs_i = (test_obs[:i, :] * pos_std + pos_mean).numpy()
-    plt.scatter(obs_i[:, 0], obs_i[:, 1], color='k', s=3)
-    plt.plot(state_i[:, 0], state_i[:, 1], '--', color='r')
-    plt.title('t = {}'.format(i + 1))
-    plt.xlim((0, 100))
-    plt.ylim((-10, 60))
-    plt.savefig("./figs/experiments/transformer/tmp/tmp_{:03d}.png".format(i))
-    # plt.show()
-
-make_gif("./figs/experiments/transformer/tmp/", "./figs/experiments/transformer/seq12.gif", delete_frames=True)
-
-#%%
-# Extract level sets
-
-# Define the context (time that we're conditioning on)
-flow_transformer.eval()
-seq_idx = 6
-test_obs = obs_seqs[seq_idx]
-test_pos = pos_seqs[seq_idx]
-test_times = time_seqs[seq_idx]
-
-xline = torch.linspace(-4.0, 4.0, 200)
-yline = torch.linspace(-4.0, 4.0, 200)
-xgrid, ygrid = torch.meshgrid(xline, yline)
-xyinput = torch.cat([xgrid.reshape(-1, 1), ygrid.reshape(-1, 1)], dim=1)
-new_xline = (xline*pos_std[0])+pos_mean[0]
-new_yline = (yline*pos_std[1])+pos_mean[1]
-new_xgrid, new_ygrid = torch.meshgrid(new_xline, new_yline)
-
-ctx_test = torch.zeros(5, 3, dtype=torch.float32)
-
-i = 10
 with torch.no_grad():
-    ctx_test[0:i, 0:2] = test_obs[i-5:i, :]
-    ctx_test[0:i, 2] = time_seqs[seq_idx][i-5:i]
+    flow_transformer.eval()
+    context[:, 0:2] = obs[(i-min_seq_len):i, :]
+    context[:, 2] = time_seqs[seq_idx][i-min_seq_len:i]
+    zgrid = flow_transformer.log_prob(xyinput, context.repeat(40000, 1, 1)).exp().reshape(200, 200)
 
-ctx_test = ctx_test.unsqueeze(0)
+plt.contourf(new_xgrid.numpy(), new_ygrid.numpy(), zgrid.numpy(), 
+    levels = 500, cmap="viridis")
 
-embedded_context = flow_transformer._embedding_net(ctx_test)
-rep_embedded_context = torchutils.repeat_rows(embedded_context.unsqueeze(0), num_reps=400)
+state_i = (pos[:i, :] * pos_std + pos_mean).numpy()
+obs_i = (obs[:i, :] * pos_std + pos_mean).numpy()
+plt.scatter(obs_i[:, 0], obs_i[:, 1], color='k', s=3)
+plt.plot(state_i[:, 0], state_i[:, 1], '--', color='r')
+plt.title('t = {}'.format(i + 1))
+plt.xlim((0, 100))
+plt.ylim((-10, 60))
+plt.savefig("./figs/experiments/transformer/transformer_pdf.png")
+plt.show()
+
+#%%
+'''
+********************************************************************************
+Generate GIFs
+********************************************************************************
+'''
+def generate_sequence_gif(seq_idx):
+    obs = obs_seqs[seq_idx]
+    pos = pos_seqs[seq_idx]
+
+    xline = torch.linspace(-4.0, 4.0, 200)
+    yline = torch.linspace(-4.0, 4.0, 200)
+    xgrid, ygrid = torch.meshgrid(xline, yline)
+    xyinput = torch.cat([xgrid.reshape(-1, 1), ygrid.reshape(-1, 1)], dim=1)
+    new_xline = (xline*pos_std[0])+pos_mean[0]
+    new_yline = (yline*pos_std[1])+pos_mean[1]
+    new_xgrid, new_ygrid = torch.meshgrid(new_xline, new_yline)
+
+    context = torch.zeros(5, 3, dtype=torch.float32)
+
+    for i in range(min_seq_len, seq_lens[seq_idx]):    
+        with torch.no_grad():
+            flow_transformer.eval()
+            context[:, 0:2] = obs[(i-min_seq_len):i, :]
+            context[:, 2] = time_seqs[seq_idx][i-min_seq_len:i]
+            zgrid = flow_transformer.log_prob(
+                xyinput, context.repeat(40000, 1, 1)).exp().reshape(200, 200)
+
+        plt.contourf(new_xgrid.numpy(), new_ygrid.numpy(), zgrid.numpy(), 
+            levels = 500, cmap="viridis")
+
+        state_i = (pos[:i, :] * pos_std + pos_mean).numpy()
+        obs_i = (obs[:i, :] * pos_std + pos_mean).numpy()
+        plt.scatter(obs_i[:, 0], obs_i[:, 1], color='k', s=3)
+        plt.plot(state_i[:, 0], state_i[:, 1], '--', color='r')
+        plt.title('t = {}'.format(i + 1))
+        plt.xlim((0, 100))
+        plt.ylim((-10, 60))
+        plt.savefig("./figs/experiments/transformer/tmp/tmp_{:03d}.png".format(i))
+        plt.show()
+
+    make_gif("./figs/experiments/transformer/tmp/", 
+        "./figs/experiments/transformer/seq{:d}.gif".format(seq_idx), delete_frames=True)
+
+generate_sequence_gif(6)
+generate_sequence_gif(12)
+
+# %%
+'''
+********************************************************************************
+Plot level sets
+********************************************************************************
+'''
+# Define the context
+seq_idx = 6 # sequence index
+i = 10      # time step in the sequence
+
+obs = obs_seqs[seq_idx]
+obs = pos_seqs[seq_idx]
+
+xline = torch.linspace(-4.0, 4.0, 200)
+yline = torch.linspace(-4.0, 4.0, 200)
+xgrid, ygrid = torch.meshgrid(xline, yline)
+xyinput = torch.cat([xgrid.reshape(-1, 1), ygrid.reshape(-1, 1)], dim=1)
+new_xline = (xline*pos_std[0])+pos_mean[0]
+new_yline = (yline*pos_std[1])+pos_mean[1]
+new_xgrid, new_ygrid = torch.meshgrid(new_xline, new_yline)
+
+context = torch.zeros(5, 3, dtype=torch.float32)
+
+with torch.no_grad():
+    flow_transformer.eval()
+    context[:, 0:2] = obs[(i-min_seq_len):i, :]
+    context[:, 2] = time_seqs[seq_idx][i-min_seq_len:i]
+
+context = context.unsqueeze(0)
+
+embedded_context = flow_transformer._embedding_net(context)
+n_points = 400
+rep_embedded_context = torchutils.repeat_rows(embedded_context.unsqueeze(0), num_reps=n_points)
 
 params = flow_transformer._distribution._compute_params(embedded_context.unsqueeze(0))
 
@@ -298,37 +317,21 @@ Sigma = torch.diag((log_stds).exp()**2).numpy()
 
 p1 = 0.68; p2 = 0.95; p3 = 0.995
 
-def error_ellipse(mu, Sigma, prob):
-    r = np.sqrt(-2*np.log(1-prob))
-    angles = torch.linspace(0, 2*np.pi, 400)
-    cx = [r*np.cos(a) for a in angles];
-    cy = [r*np.sin(a) for a in angles];
+def extract_region(mu, Sigma, p, flow, n_points):
+    ex, ey = error_ellipse(mu, Sigma, p, n_points)
+    circle = torch.stack([ex, ey]).T
+    region, _ = flow._transform.inverse(circle, context = rep_embedded_context)
+    region = torchutils.split_leading_dim(region, shape=[-1, n_points])
 
-    ellipse = np.matmul(sqrtm(Sigma), (np.vstack([cx, cy]))) + np.reshape(mu, (2,1))
-    ellipse = torch.Tensor(ellipse)
+    return region, ex, ey
 
-    ex = ellipse[0,:]; ey = ellipse[1,:]
-
-    return ex, ey
-
-ex1, ey1 = error_ellipse(mu, Sigma, p1)
-ex2, ey2 = error_ellipse(mu, Sigma, p2)
-ex3, ey3 = error_ellipse(mu, Sigma, p3)
-
-circle1 = torch.stack([ex1, ey1]).T
-circle2 = torch.stack([ex2, ey2]).T
-circle3 = torch.stack([ex3, ey3]).T
-
-region1, _ = flow_transformer._transform.inverse(circle1, context = rep_embedded_context)
-region2, _ = flow_transformer._transform.inverse(circle2, context = rep_embedded_context)
-region3, _ = flow_transformer._transform.inverse(circle3, context = rep_embedded_context)
-
-region1 = torchutils.split_leading_dim(region1, shape=[-1, 400])
-region2 = torchutils.split_leading_dim(region2, shape=[-1, 400])
-region3 = torchutils.split_leading_dim(region3, shape=[-1, 400])
-
+region1, ex1, ey1 = extract_region(mu, Sigma, p1, flow_transformer, n_points)
 region1 = (region1.detach()*pos_std)+pos_mean
+
+region2, ex2, ey2 = extract_region(mu, Sigma, p2, flow_transformer, n_points)
 region2 = (region2.detach()*pos_std)+pos_mean
+
+region3, ex3, ey3 = extract_region(mu, Sigma, p3, flow_transformer, n_points)
 region3 = (region3.detach()*pos_std)+pos_mean
 
 fig, axs = plt.subplots(1, 2)
@@ -342,4 +345,18 @@ axs[1].plot(region3.squeeze()[:,0], region3.squeeze()[:,1]);
 
 axs[1].set_aspect('equal'); axs[1].grid(True)
 axs[1].set_title("Driving Scene")
+
+#%%
+'''
+********************************************************************************
+Save level set data
+********************************************************************************
+'''
+with h5py.File("flow_level_sets_transformer.h5", 'w') as f:
+    f.create_dataset('x68', data=region1.squeeze()[:,0])
+    f.create_dataset('y68', data=region1.squeeze()[:,1])
+    f.create_dataset('x95', data=region2.squeeze()[:,0])
+    f.create_dataset('y95', data=region2.squeeze()[:,1])
+    f.create_dataset('x995', data=region3.squeeze()[:,0])
+    f.create_dataset('y995', data=region3.squeeze()[:,1])
 # %%
