@@ -25,7 +25,7 @@ from nflows.utils import torchutils
 
 # %%
 # Read in the dataset
-with h5py.File("bicycle_dataset_bimodal.h5", 'r') as f:
+with h5py.File("data/bicycle_dataset_bimodal.h5", 'r') as f:
     position, time = np.array(f.get("position")), np.array(f.get("time"))
 
 position = torch.Tensor(position).T
