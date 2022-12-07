@@ -220,6 +220,7 @@ make_gif("./figs/experiments/transformer/tmp/", "./figs/experiments/transformer/
 
 #%%
 # Make a gif
+plt.clf()
 flow.eval()
 seq_idx = 12
 test_obs = obs_seqs[seq_idx]
