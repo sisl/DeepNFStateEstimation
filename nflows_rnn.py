@@ -34,7 +34,9 @@ time = torch.Tensor(time)
 # Generate noisy observationa
 obs_sigma = 1.0
 obs = copy.deepcopy(position)
-obs += np.random.normal(0.0, obs_sigma, obs.shape)
+
+torch.manual_seed(3456271)
+obs += torch.distributions.Normal(0.0,obs_sigma).sample(obs.shape)
 
 # Standardize the data
 pos_mean = torch.mean(obs, dim=0)
