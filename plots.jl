@@ -326,5 +326,19 @@ save("figs/vae_level_sets.pdf", a)
 save("figs/vae_level_sets.tex", a, include_preamble=true)
 
 ##
-gru_loss = CSV.read("figs/loss/gru_loss.csv", DataFrame; header=false).Column1
 rnn_loss = CSV.read("figs/loss/rnn_loss.csv", DataFrame; header=false).Column1
+lstm_loss = CSV.read("figs/loss/lstm_loss.csv", DataFrame; header=false).Column1
+gru_loss = CSV.read("figs/loss/gru_loss.csv", DataFrame; header=false).Column1
+
+epochs = 1:3000
+
+a = Axis(style="enlarge x limits=false,grid=both, no marks",
+            xlabel="epochs", ylabel="loss",
+            legendPos = "north east",legendStyle="nodes = {scale = 0.75}")
+
+push!(a, PGFPlots.Linear(epochs, rnn_loss, style="pastelBlue", legendentry="RNN"))
+push!(a, PGFPlots.Linear(epochs, lstm_loss, style="pastelRed", legendentry="LSTM"))
+push!(a, PGFPlots.Linear(epochs, gru_loss, style="pastelGreen", legendentry="GRU"))
+
+save("figs/loss_curves.pdf", a)
+save("figs/loss_curves.tex", a, include_preamble=true)
