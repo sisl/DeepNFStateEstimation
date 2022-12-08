@@ -161,7 +161,7 @@ optimizer = optim.Adam(flow_gru.parameters(), lr=1e-3)
 Train the flow
 ********************************************************************************
 '''
-num_iter = 3000
+num_iter = 10000
 loss_arr = []
 for i in range(num_iter):
     indices = torch.randperm(feats_padded.shape[0])[:2048].to(int)

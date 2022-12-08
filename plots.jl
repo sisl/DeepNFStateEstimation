@@ -512,6 +512,131 @@ save("figs/lstm_level_sets.tex", a, include_preamble=true)
 
 ##
 #*******************************************************************************
+# TRANSFORMER LEVEL SETS
+#*******************************************************************************
+fid = h5open("flow_level_sets_transformer.h5", "r")
+
+x68 = Float64.(read(fid["x68"]))
+y68 = Float64.(read(fid["y68"]))
+x95 = Float64.(read(fid["x95"]))
+y95 = Float64.(read(fid["y95"]))
+x995 = Float64.(read(fid["x995"]))
+y995 = Float64.(read(fid["y995"]))
+
+close(fid)
+
+fid = h5open("observation_sequence.h5", "r")
+
+obs_x = Float64.(read(fid["obs_x"]))
+obs_y = Float64.(read(fid["obs_y"]))
+
+close(fid)
+
+s0 = [x0, y0, θ0, v0, ϕ0, t0]
+t = round(Int, 5.5/Δt)
+
+t_final = lastindex(times)
+τ_arr = simulate_τ(1, s0, s->bicycle_dynamics(s, withNoise=false), t, drop_rate=0.0);
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+
+s_switch = τ_arr[end][end]
+
+τ_arr_right = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, 1, withNoise=false), t_final-t, drop_rate=0.0);
+x_right = [s[1] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+y_right = [s[2] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+
+τ_arr_left = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, -1, withNoise=false), t_final-t, drop_rate=0.0);
+x_left = [s[1] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+y_left = [s[2] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+
+##
+a = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqualImage=true,
+            xlabel="x", ylabel="y",title="Transformer Level Sets", xmin = 0, xmax = 90,
+            legendPos = "north east",legendStyle="nodes = {scale = 0.75}")#,  view="{0}{90}")
+push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_right, y_right, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_left, y_left, style = "black, thick"))
+push!(a, PGFPlots.Linear(x68, y68, style = "viridis1, thick, solid"))
+push!(a, PGFPlots.Linear(x95, y95, style = "viridis2, thick, solid"))
+push!(a, PGFPlots.Linear(x995, y995, style = "viridis3, thick, solid"))
+push!(a, PGFPlots.Linear(obs_x, obs_y, style = "only marks,dark_red, mark options=
+    {scale=0.5,fill=dark_red, solid, mark = *}"))
+save("figs/transformer_level_sets.pdf", a)
+save("figs/transformer_level_sets.tex", a, include_preamble=true)
+
+##
+#*******************************************************************************
+# UNIMODAL DATASET
+#*******************************************************************************
+fid = h5open("data/bicycle_dataset_continuous.h5", "r")
+points = read(fid["position"])[1:5000, :]
+time = Float64.(read(fid["time"]))[1:5000]
+close(fid)
+
+s0 = [x0, y0, θ0, v0, ϕ0, t0]
+t = lastindex(times)
+τ_arr = simulate_τ(1, s0, s->bicycle_dynamics(s, withNoise=false), t, drop_rate=0.0);
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+
+a = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqualImage=true,
+            xlabel="x", ylabel="y", xmin = 0, xmax = 90, ymin = 0,
+            legendPos = "north east",legendStyle="nodes = {scale = 0.75}",  view="{0}{90}")
+push!(a, PGFPlots.Linear(points', style = "only marks, gray, mark options=
+    {scale=0.1,fill=gray, solid, mark = *}"))
+
+push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
+
+save("figs/unimodal_dataset.pdf", a)
+save("figs/unimodal_dataset.tex", a, include_preamble=true)
+
+##
+#*******************************************************************************
+# BIMODAL DATASET
+#*******************************************************************************
+fid = h5open("data/bicycle_dataset_bimodal.h5", "r")
+points = read(fid["position"])[1:5000, :]
+time = Float64.(read(fid["time"]))[1:5000]
+close(fid)
+
+s0 = [x0, y0, θ0, v0, ϕ0, t0]
+t = round(Int, 5.5/Δt)
+
+t_final = lastindex(times)
+τ_arr = simulate_τ(1, s0, s->bicycle_dynamics(s, withNoise=false), t, drop_rate=0.0);
+x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
+
+s_switch = τ_arr[end][end]
+
+τ_arr_right = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, 1, withNoise=false), t_final-t, drop_rate=0.0);
+x_right = [s[1] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+y_right = [s[2] for i in 1:lastindex(τ_arr_right) for s in τ_arr_right[i]];
+
+τ_arr_left = simulate_τ(1, s_switch, s->bicycle_dynamics_switch(
+    s, -1, withNoise=false), t_final-t, drop_rate=0.0);
+x_left = [s[1] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+y_left = [s[2] for i in 1:lastindex(τ_arr_left) for s in τ_arr_left[i]];
+
+a = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqualImage=true,
+            xlabel="x", ylabel="y", xmin = 0, xmax = 90, ymin = 0,
+            legendPos = "north east",legendStyle="nodes = {scale = 0.75}",  view="{0}{90}")
+push!(a, PGFPlots.Linear(points', style = "only marks, gray, mark options=
+    {scale=0.1,fill=gray, solid, mark = *}"))
+push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_right, y_right, style = "black, thick"))
+push!(a, PGFPlots.Linear(x_left, y_left, style = "black, thick"))
+
+
+save("figs/bimodal_dataset.pdf", a)
+save("figs/bimodal_dataset.tex", a, include_preamble=true)
+
+##
+#*******************************************************************************
 # LOSS CURVES
 #*******************************************************************************
 rnn_loss = CSV.read("figs/loss/rnn_loss.csv", DataFrame; header=false).Column1
