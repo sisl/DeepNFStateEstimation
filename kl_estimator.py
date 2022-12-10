@@ -86,7 +86,6 @@ def kl_two_sample_alternative(x,y):
 
 if __name__=="__main__":
     dist1 = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros((2,)),torch.eye(2))
-    # dist1 = torch.distributions.multivariate_normal.MultivariateNormal(torch.Tensor([2.3,3.7]),torch.Tensor([[5.9,-0.9],[-0.9,10.9]]))
     dist2 = torch.distributions.multivariate_normal.MultivariateNormal(torch.Tensor([0.5,-0.7]),torch.Tensor([[0.9,0.5],[0.5,1.9]]))
     
     x = dist2.sample((1000,))

@@ -13,7 +13,6 @@ def metropolis_hastings(w,model,num_samples=100,num_start=100):
         coin = torch.rand(1)
         if coin <= alpha:
             x = xp
-            # xs.append(xp.squeeze())
     
     while len(xs) < num_samples:
         proposal = torch.distributions.multivariate_normal.MultivariateNormal(x.squeeze(),0.1 * torch.eye(2))

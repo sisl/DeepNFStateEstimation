@@ -140,14 +140,6 @@ def plot_space_mapping(model,x,basename):
     axs[1].set_xlabel(r"$z_1$")
     axs[1].set_ylabel(r"$z_2$")
 
-    # axs[2].scatter(x_z[:,1],x_z[:,2],s=3,c=colors)
-    # axs[2].set_xlabel(r"$z_2$")
-    # axs[2].set_ylabel(r"$z_3$")
-
-    # axs[3].scatter(x_z[:,0],x_z[:,2],s=3,c=colors)
-    # axs[3].set_xlabel(r"$z_1$")
-    # axs[3].set_ylabel(r"$z_3$")
-
     fig.suptitle(r"Mapping between $\mathbf{X}$ and $\mathbf{Z}$")
     fig.tight_layout()
     fig.savefig(f"./figs/experiments/{basename}/space_mapping.png",dpi=600)
