@@ -8,9 +8,6 @@ import matplotlib.pyplot as plt
 x_complete_all,t = read_bicycle_dataset("bicycle_dataset_continuous.h5")
 x_conditioned = x_complete_all[t==13,:][:1000]
 
-# mu = torch.mean(x_conditioned,dim=0)
-# std = torch.std(x_conditioned,dim=0)
-# x_conditioned = (x_conditioned-mu)/std
 
 with h5py.File("samples_ukf.h5", 'r') as f:
     ukf_samples = torch.Tensor(np.array(f["samples"]))
@@ -36,11 +33,3 @@ with h5py.File("samples_nflow.h5", 'r') as f:
 dkl_nflow = two_sample_kl_estimator(x_conditioned,nflow_samples)
 print("DKL_nflow: ",dkl_nflow.item())
 
-# plt.scatter(x_conditioned[:,0],x_conditioned[:,1],s=1)
-# plt.scatter(mdn_samples[:,0],mdn_samples[:,1],s=1)
-# plt.scatter(vae_samples[:,0],mdn_samples[:,1],s=1)
-# plt.scatter(ukf_samples[:,0],ukf_samples[:,1],s=1)
-# plt.scatter(nflow_samples[:,0],nflow_samples[:,1],s=1)
-# plt.show()
-
-print("stop")
