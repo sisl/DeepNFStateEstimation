@@ -18,4 +18,8 @@ All of the training files have descriptive names. `nflows_transformer.py`, e.g.,
 ## Results
 When running either of the `nflows_*.py` files, a gif showing the performance of the trained normalzing flow will be saved in `./figs/experiments/*/seq.gif` where * is a placeholder for the experiment name. To demonstrate how well normalizing flows work, even for the harder bimodal dataset conditioning on a sequence of noisy observations, we include a gif showing the predictions made using a normalizing flow with a Transformer-embedding.
 
-![](https://github.com/MarcSchlichting/UnderCurrent/figs/exepriments/transformer/seq6.gif)
+<p align="center">
+  <img src="https://github.com/MarcSchlichting/UnderCurrent/blob/main/figs/experiments/transformer/seq6.gif" alt="animated" />
+</p>
+
+
