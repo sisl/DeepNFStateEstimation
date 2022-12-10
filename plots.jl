@@ -107,7 +107,6 @@ function simulate_τ(N, s0, T, t; drop_rate = 0.0)
     return τ_arr
 end
 
-
 ##
 #*******************************************************************************
 # UNSCENTED TRANSFORM
@@ -148,18 +147,16 @@ end
 μ_ukf_arr = []; Σ_ukf_arr = []; S_arr = []
 push!(μ_ukf_arr, μp); push!(Σ_ukf_arr, Σp); push!(S_arr, S0);
 for i = 2:lastindex(times)
-    # INDEX INTO SEQ HERE 
     μp, Σp, S = unscented_transform(μp, Σp, λ, s->bicycle_dynamics(s), ws, n)
     Σp = Σp + Σ0
     push!(μ_ukf_arr, μp); push!(Σ_ukf_arr, Σp); push!(S_arr, S)
 end
 
-
 μ_interest = transpose(μ_ukf_arr[131][1:2])
 Σ_interest = Σ_ukf_arr[131][1:2, 1:2]
 
 ##
-fid = h5open("bicycle_dataset_continuous.h5", "r")
+fid = h5open("data/bicycle_dataset_continuous.h5", "r")
 points = read(fid["position"])[1:5000, :]
 time = Float64.(read(fid["time"]))[1:5000]
 
@@ -185,22 +182,16 @@ push!(a, PGFPlots.Linear(red_dots', style = "only marks,dark_red, mark options=
 push!(a, plot_ellipse(μ_interest, Σ_interest, 0.68, "viridis1"))
 push!(a, plot_ellipse(μ_interest, Σ_interest, 0.95, "viridis2"))
 push!(a, plot_ellipse(μ_interest, Σ_interest, 0.995, "viridis3"))
-#push!(a, PGFPlots.Linear(x68, y68, style = "viridis1, thick"))
-#push!(a, PGFPlots.Linear(x95, y95, style = "viridis2, thick"))
-#push!(a, PGFPlots.Linear(x995, y995, style = "viridis3, thick"))
 push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
 
 save("figs/ukf_level_sets.pdf", a)
 save("figs/ukf_level_sets.tex", a, include_preamble=true)
 
-
-
-
 ##
 #*******************************************************************************
 # NORMALIZING FLOW LEVEL SETS
 #*******************************************************************************
-fid = h5open("flow_level_sets.h5", "r")
+fid = h5open("data/flow_level_sets.h5", "r")
 
 x68 = Float64.(read(fid["x68"]))
 y68 = Float64.(read(fid["y68"]))
@@ -212,7 +203,7 @@ y995 = Float64.(read(fid["y995"]))
 close(fid)
 
 ##
-fid = h5open("bicycle_dataset_continuous.h5", "r")
+fid = h5open("data/bicycle_dataset_continuous.h5", "r")
 points = read(fid["position"])[1:5000, :]
 time = Float64.(read(fid["time"]))[1:5000]
 
@@ -247,9 +238,9 @@ save("figs/normalizing_flow_level_sets.tex", a, include_preamble=true)
 #*******************************************************************************
 # MDN LEVEL SETS
 #*******************************************************************************
-fid = h5open("mdn_level_sets.h5", "r")
+fid = h5open("data/mdn_level_sets.h5", "r")
 
-# Note: Data is backwards?
+# Note: data saved backwards
 x995 = Float64.(read(fid["x68"]))
 y995 = Float64.(read(fid["y68"]))
 x95 = Float64.(read(fid["x95"]))
@@ -260,7 +251,7 @@ y68 = Float64.(read(fid["y995"]))
 close(fid)
 
 ##
-fid = h5open("bicycle_dataset_continuous.h5", "r")
+fid = h5open("data/bicycle_dataset_continuous.h5", "r")
 points = read(fid["position"])[1:5000, :]
 time = Float64.(read(fid["time"]))[1:5000]
 
@@ -295,9 +286,9 @@ save("figs/mdn_level_sets.tex", a, include_preamble=true)
 #*******************************************************************************
 # VAE LEVEL SETS
 #*******************************************************************************
-fid = h5open("vae_level_sets.h5", "r")
+fid = h5open("data/vae_level_sets.h5", "r")
 
-# Note: Data is backwards?
+# Note: data saved backwards
 x995 = Float64.(read(fid["x68"]))
 y995 = Float64.(read(fid["y68"]))
 x95 = Float64.(read(fid["x95"]))
@@ -308,7 +299,7 @@ y68 = Float64.(read(fid["y995"]))
 close(fid)
 
 ##
-fid = h5open("bicycle_dataset_continuous.h5", "r")
+fid = h5open("data/bicycle_dataset_continuous.h5", "r")
 points = read(fid["position"])[1:5000, :]
 time = Float64.(read(fid["time"]))[1:5000]
 
@@ -343,7 +334,7 @@ save("figs/vae_level_sets.tex", a, include_preamble=true)
 #*******************************************************************************
 # RNN LEVEL SETS
 #*******************************************************************************
-fid = h5open("flow_level_sets_rnn.h5", "r")
+fid = h5open("data/flow_level_sets_rnn.h5", "r")
 
 x68 = Float64.(read(fid["x68"]))
 y68 = Float64.(read(fid["y68"]))
@@ -354,7 +345,7 @@ y995 = Float64.(read(fid["y995"]))
 
 close(fid)
 
-fid = h5open("observation_sequence.h5", "r")
+fid = h5open("data/observation_sequence.h5", "r")
 
 obs_x = Float64.(read(fid["obs_x"]))
 obs_y = Float64.(read(fid["obs_y"]))
@@ -400,7 +391,7 @@ save("figs/rnn_level_sets.tex", a, include_preamble=true)
 #*******************************************************************************
 # GRU LEVEL SETS
 #*******************************************************************************
-fid = h5open("flow_level_sets_gru.h5", "r")
+fid = h5open("data/flow_level_sets_gru.h5", "r")
 
 x68 = Float64.(read(fid["x68"]))
 y68 = Float64.(read(fid["y68"]))
@@ -411,7 +402,7 @@ y995 = Float64.(read(fid["y995"]))
 
 close(fid)
 
-fid = h5open("observation_sequence.h5", "r")
+fid = h5open("data/observation_sequence.h5", "r")
 
 obs_x = Float64.(read(fid["obs_x"]))
 obs_y = Float64.(read(fid["obs_y"]))
@@ -457,7 +448,7 @@ save("figs/gru_level_sets.tex", a, include_preamble=true)
 #*******************************************************************************
 # LSTM LEVEL SETS
 #*******************************************************************************
-fid = h5open("flow_level_sets_lstm.h5", "r")
+fid = h5open("data/flow_level_sets_lstm.h5", "r")
 
 x68 = Float64.(read(fid["x68"]))
 y68 = Float64.(read(fid["y68"]))
@@ -468,7 +459,7 @@ y995 = Float64.(read(fid["y995"]))
 
 close(fid)
 
-fid = h5open("observation_sequence.h5", "r")
+fid = h5open("data/observation_sequence.h5", "r")
 
 obs_x = Float64.(read(fid["obs_x"]))
 obs_y = Float64.(read(fid["obs_y"]))
@@ -514,7 +505,7 @@ save("figs/lstm_level_sets.tex", a, include_preamble=true)
 #*******************************************************************************
 # TRANSFORMER LEVEL SETS
 #*******************************************************************************
-fid = h5open("flow_level_sets_transformer.h5", "r")
+fid = h5open("data/flow_level_sets_transformer.h5", "r")
 
 x68 = Float64.(read(fid["x68"]))
 y68 = Float64.(read(fid["y68"]))
@@ -525,7 +516,7 @@ y995 = Float64.(read(fid["y995"]))
 
 close(fid)
 
-fid = h5open("observation_sequence.h5", "r")
+fid = h5open("data/observation_sequence.h5", "r")
 
 obs_x = Float64.(read(fid["obs_x"]))
 obs_y = Float64.(read(fid["obs_y"]))
@@ -631,7 +622,6 @@ push!(a, PGFPlots.Linear(x, y, style = "black, thick"))
 push!(a, PGFPlots.Linear(x_right, y_right, style = "black, thick"))
 push!(a, PGFPlots.Linear(x_left, y_left, style = "black, thick"))
 
-
 save("figs/bimodal_dataset.pdf", a)
 save("figs/bimodal_dataset.tex", a, include_preamble=true)
 
@@ -639,19 +629,21 @@ save("figs/bimodal_dataset.tex", a, include_preamble=true)
 #*******************************************************************************
 # LOSS CURVES
 #*******************************************************************************
-rnn_loss = CSV.read("figs/loss/rnn_loss.csv", DataFrame; header=false).Column1
-lstm_loss = CSV.read("figs/loss/lstm_loss.csv", DataFrame; header=false).Column1
-gru_loss = CSV.read("figs/loss/gru_loss.csv", DataFrame; header=false).Column1
+rnn_loss = CSV.read("figs/loss/rnn_loss.csv", DataFrame; header=false).Column1[1:3000]
+lstm_loss = CSV.read("figs/loss/lstm_loss.csv", DataFrame; header=false).Column1[1:3000]
+gru_loss = CSV.read("figs/loss/gru_loss.csv", DataFrame; header=false).Column1[1:3000]
+transformer_loss = CSV.read("figs/loss/transformer_loss.csv", DataFrame; header=false).Column1[1:3000]
 
 epochs = 1:3000
 
 a = Axis(style="enlarge x limits=false,grid=both, no marks",
-            xlabel="epochs", ylabel="loss",
+            xlabel="iteration", ylabel="loss", ymax = 5,
             legendPos = "north east",legendStyle="nodes = {scale = 0.75}")
 
 push!(a, PGFPlots.Linear(epochs, rnn_loss, style="pastelBlue", legendentry="RNN"))
 push!(a, PGFPlots.Linear(epochs, lstm_loss, style="pastelRed", legendentry="LSTM"))
 push!(a, PGFPlots.Linear(epochs, gru_loss, style="pastelGreen", legendentry="GRU"))
+push!(a, PGFPlots.Linear(epochs, transformer_loss, style="pastelPurple", legendentry="Transformer"))
 
 save("figs/loss_curves.pdf", a)
-save("figs/loss_curves.tex", a, include_preamble=true)
+save("figs/loss_curves.tex", a, include_preamble=false)

@@ -117,7 +117,7 @@ x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
 y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
 
 df = DataFrame([x y], :auto)
-CSV.write("nominal_trajectory.csv", df)
+CSV.write("data/nominal_trajectory.csv", df)
 
 ##
 #*******************************************************************************
@@ -133,17 +133,6 @@ t = lastindex(times)
 x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
 y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
 t = [s[6] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
-
-##
-# Plot the stored data
-p = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqual=true,
-            xlabel="x", ylabel="y",title="Bicycle Model Rollouts",
-            legendPos = "north east",legendStyle="nodes = {scale = 0.75}")
-push!(p, PGFPlots.Linear(x[1:1000], y[1:1000], 
-            style = "pastelBlue, only marks, mark options=
-            {scale=0.25,fill=pastelBlue, solid, mark = o}, forget plot"))
-
-save("figs/bicycle_dataset_continuous.pdf", p)
 
 ##
 # Save the data
@@ -166,17 +155,6 @@ t = lastindex(times)
 x = [s[1] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
 y = [s[2] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
 t = [s[6] for i in 1:lastindex(τ_arr) for s in τ_arr[i]];
-
-##
-# Plot the stored data
-p = Axis(style="enlarge x limits=false,grid=both, no marks", axisEqual=true,
-            xlabel="x", ylabel="y",title="Bicycle Model Rollouts",
-            legendPos = "north east",legendStyle="nodes = {scale = 0.75}")
-push!(p, PGFPlots.Linear(x[1:3000], y[1:3000], 
-            style = "pastelBlue, only marks, mark options=
-            {scale=0.25,fill=pastelBlue, solid, mark = o}, forget plot"))
-
-save("figs/bicycle_dataset_bimodal.pdf", p)
 
 ##
 # Save the data
