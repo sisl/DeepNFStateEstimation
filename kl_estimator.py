@@ -1,4 +1,6 @@
 import torch
+from scipy.spatial import cKDTree as KDTree
+import numpy as np
 
 def one_sample_kl_estimator(x1,dist,m):
 
@@ -55,6 +57,32 @@ def two_sample_kl_estimator(x1,x2):
 
     dkl = -torch.log(r_k/s_k).sum() * d / n + torch.log(torch.Tensor([m / (n - 1.)]))
     return dkl
+
+
+def kl_two_sample_alternative(x,y):
+    # Check the dimensions are consistent
+    x = np.atleast_2d(x)
+    y = np.atleast_2d(y)
+
+    n,d = x.shape
+    m,dy = y.shape
+
+    assert(d == dy)
+
+
+    # Build a KD tree representation of the samples and find the nearest neighbour
+    # of each point in x.
+    xtree = KDTree(x)
+    ytree = KDTree(y)
+
+    # Get the first two nearest neighbours for x, since the closest one is the
+    # sample itself.
+    r = xtree.query(x, k=2, eps=.01, p=2)[0][:,1]
+    s = ytree.query(x, k=1, eps=.01, p=2)[0]
+
+    # There is a mistake in the paper. In Eq. 14, the right side misses a negative sign
+    # on the first term of the right hand side.
+    return -np.log(r/s).sum() * d / n + np.log(m / (n - 1.))
 
 if __name__=="__main__":
     dist1 = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros((2,)),torch.eye(2))
