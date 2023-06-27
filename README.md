@@ -1,4 +1,4 @@
-# UnderCurrent
+# Deep Normalizing Flows for State Estimation
 
 ## Installation
 All the required Python packages are saved in `requirements.txt` and can be installed via
